@@ -1,26 +1,78 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --brand: #2347f0;
+  --brand-dark: #0b1a7a;
+  --ink: #14171f;
+  --muted: #5b6275;
+  --page: #f6f7fa;
+  --surface: #ffffff;
+  --border: #e3e6ee;
+  --row-hover: #f3f5ff;
+
+  /* Status tones: text and tint pass WCAG AA together; fill is for bars and markers. */
+  --positive-fg: #0b6b3a; --positive-bg: #e3f6ea; --positive-fill: #1f9d55;
+  --caution-fg: #7a4a00; --caution-bg: #fdf1d6; --caution-fill: #d9930d;
+  --negative-fg: #a11a1a; --negative-bg: #fde8e8; --negative-fill: #d92d20;
+  --high-fg: #8a3a00; --high-bg: #ffe9d6; --high-fill: #e8590c;
+  --neutral-fg: #3f4658; --neutral-bg: #eceef3; --neutral-fill: #98a2b3;
+  --info-fg: #1b2fb0; --info-bg: #e8edff; --info-fill: #2347f0;
+
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --shadow-pop: 0 8px 24px rgba(20, 23, 31, 0.14);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-navy: var(--brand-dark);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-line: var(--border);
+  --font-sans: var(--font-manrope);
+  --radius-control: 8px;
+  --radius-card: 12px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+html { scroll-behavior: smooth; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.55;
+  overflow-x: hidden;
+}
+
+/* Visible keyboard focus everywhere. */
+:where(a, button, summary, select, input, [tabindex]):focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Cards: 1px border, no shadow. */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); }
+
+/* Tone scopes: set the three colours once, then use them from components. */
+.tone-positive { --t-fg: var(--positive-fg); --t-bg: var(--positive-bg); --t-fill: var(--positive-fill); }
+.tone-caution { --t-fg: var(--caution-fg); --t-bg: var(--caution-bg); --t-fill: var(--caution-fill); }
+.tone-negative { --t-fg: var(--negative-fg); --t-bg: var(--negative-bg); --t-fill: var(--negative-fill); }
+.tone-high { --t-fg: var(--high-fg); --t-bg: var(--high-bg); --t-fill: var(--high-fill); }
+.tone-neutral { --t-fg: var(--neutral-fg); --t-bg: var(--neutral-bg); --t-fill: var(--neutral-fill); }
+.tone-info { --t-fg: var(--info-fg); --t-bg: var(--info-bg); --t-fill: var(--info-fill); }
+
+.num { font-variant-numeric: tabular-nums; }
+
+@keyframes pulse-soft { 50% { opacity: 0.5; } }
+.skeleton { background: #e6e9f1; border-radius: 8px; animation: pulse-soft 1.6s ease-in-out infinite; }
+
+.leaflet-popup-content a { color: var(--brand); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
