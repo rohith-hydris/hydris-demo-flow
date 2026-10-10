@@ -37,7 +37,7 @@ export default function DataTable<T>({
             {columns.map((c, i) => (
               <th
                 key={c.key} scope="col" aria-sort={c.sort === "ascending" ? "ascending" : c.sort === "none" ? "none" : undefined}
-                className={`sticky top-0 border-b border-line bg-[#FAFBFD] px-3 py-3 text-sm font-semibold text-muted ${i === 0 ? "left-0 z-[3]" : "z-[2]"} ${c.align === "right" ? "text-right" : ""}`}
+                className={`sticky top-0 border-b border-line bg-blue-50 px-3 py-3 text-sm font-semibold text-muted ${i === 0 ? "left-0 z-[3]" : "z-[2]"} ${c.align === "right" ? "text-right" : ""}`}
               >
                 {c.sortHref ? (
                   <Link href={c.sortHref} scroll={false} className={`inline-flex min-h-11 items-center hover:text-brand ${c.sort === "ascending" ? "text-brand-dark" : ""}`}>

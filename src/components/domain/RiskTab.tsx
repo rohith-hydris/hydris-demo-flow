@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { fmtScore } from "@/src/lib/format";
 import { COUNTRY_LEVEL_NOTE, VINTAGE_NOTE, explainRisk } from "@/src/lib/riskCopy";
-import { DEFAULT_WEIGHTS, PILLAR_KEYS, PILLAR_LABELS, PRESENT_AT, WATCH_AT, type RiskResult } from "@/src/lib/risk";
+import { DEFAULT_WEIGHTS, PILLAR_KEYS, PILLAR_LABELS, PRESENT_AT, RISK_COUNTED, WATCH_AT, type RiskResult } from "@/src/lib/risk";
 import type { Site } from "@/src/lib/selectors";
 import { traceRisk } from "@/src/lib/trace";
 import type { RiskCategory, RiskCode } from "@/src/lib/types";
@@ -108,7 +108,7 @@ export default function RiskTab({ site }: { site: Site }) {
               </div>
             ))}
           </div>
-          <p className="mt-3 text-sm text-ink-500">Counted over 13 risks. Coastal eutrophication is shown separately and left out.</p>
+          <p className="mt-3 text-sm text-ink-500">Counted over {RISK_COUNTED} risks. Coastal eutrophication is shown separately and left out.</p>
           <p className="mt-2 text-sm text-ink-500">{VINTAGE_NOTE}</p>
           <p className="mt-2 text-sm text-ink-500">{COUNTRY_LEVEL_NOTE}</p>
         </div>

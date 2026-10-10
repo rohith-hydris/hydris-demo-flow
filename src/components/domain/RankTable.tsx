@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
+import { RANK_RANGE_TITLE } from "@/src/lib/explain";
 import { fmtPct1, fmtScore } from "@/src/lib/format";
 import { PILLAR_LABELS } from "@/src/lib/risk";
 import type { RankRange } from "@/src/lib/rank";
@@ -54,7 +55,7 @@ export default function RankTable({ sites, ranges, deltas, selectedId, onSelect 
           <span role="columnheader">Quadrant</span>
           <span role="columnheader">Tier</span>
           <span role="columnheader">Drivers</span>
-          <span role="columnheader" title="5th to 95th percentile of 500 draws, weights varied by 20%">Rank range</span>
+          <span role="columnheader" title={RANK_RANGE_TITLE}>Rank range</span>
           <span role="columnheader" className="text-right">PWI</span>
           <span role="columnheader" className="sr-only">Open</span>
         </div>

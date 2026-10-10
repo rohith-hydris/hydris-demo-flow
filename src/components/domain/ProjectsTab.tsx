@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Sparkles, Upload } from "lucide-react";
 import type { ProjectRecord } from "@/src/data/types";
-import { displayNote, projectBenefit, projectsFor } from "@/src/lib/claims";
+import { attributionNote, displayNote, projectBenefit, projectsFor } from "@/src/lib/claims";
 import { fmtClaim, claimNote } from "@/src/lib/measure";
 import type { Site } from "@/src/lib/selectors";
 import { traceProject } from "@/src/lib/trace";
@@ -40,7 +40,7 @@ function ProjectCard({ project: p, canValidate }: { project: ProjectRecord; canV
           <dt className="text-sm text-ink-500">Claimed</dt>
           <dd className="num font-display text-[22px] font-semibold leading-7 text-ink-900">{fmtClaim(p.claim)}</dd>
           {claimNote(p.claim) && <dd className="text-sm text-ink-500">{claimNote(p.claim)}</dd>}
-          {p.attribution < 1 && <dd className="text-sm text-ink-500">Attribution share {Math.round(p.attribution * 100)}%</dd>}
+          {attributionNote(p) && <dd className="text-sm text-ink-500">{attributionNote(p)}</dd>}
         </div>
         <div>
           <dt className="flex items-center gap-1 text-sm text-ink-500">Counted <InfoButton trace={traceProject(p)} /></dt>

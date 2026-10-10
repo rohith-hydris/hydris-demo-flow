@@ -6,11 +6,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FileCheck2, Sparkles, Upload } from "lucide-react";
 import { useRole, useScope } from "@/src/context/RoleContext";
 import { suppliers } from "@/src/data/suppliers";
-import { READINESS_STATES, displayNote } from "@/src/lib/claims";
-import { fmtInt, fmtPct1 } from "@/src/lib/format";
+import { READINESS_STATES, attributionNote, displayNote } from "@/src/lib/claims";
+import { fmtPct1 } from "@/src/lib/format";
 import { claimNote, fmtClaim } from "@/src/lib/measure";
 import {
-  CLAIMS_TABS, CLAIM_STATUSES, claimRows, claimSummary, inspectionRows, parseClaimsTab, parseQueueFilters, reportRows, type ClaimRow, type InspectionRow, type ReportRow,
+  CLAIMS_TABS, CLAIM_STATUSES, claimRows, claimSummary, inspectionRows, parseClaimsTab, parseQueueFilters, reportRows, unitLines, type ClaimRow, type InspectionRow, type ReportRow,
 } from "@/src/lib/queue";
 import { getSites } from "@/src/lib/selectors";
 import {
@@ -51,7 +51,7 @@ function ClaimItem({ row, canValidate }: { row: ClaimRow; canValidate: boolean }
         </div>
         <div className="min-w-0">
           <p className="num font-semibold text-ink-900">{fmtClaim(p.claim)} <span className="font-normal text-ink-500">claimed</span></p>
-          <p className="text-sm text-ink-500">{[claimNote(p.claim), p.attribution < 1 ? `Attribution share ${Math.round(p.attribution * 100)}%` : ""].filter(Boolean).join(" ")}</p>
+          <p className="text-sm text-ink-500">{[claimNote(p.claim), attributionNote(p)].filter(Boolean).join(" ")}</p>
         </div>
         <ProjectStatusPill status={p.status} />
         <GradeChip grade={p.grade} />
@@ -166,16 +166,7 @@ export default function ClaimsScreen() {
   const visibleReports = showAll ? reports : reports.slice(0, REPORTS_COLLAPSED);
 
   const tiles = CLAIM_STATUSES.map((s) => ({ status: s, n: summary.counts[s], tone: projectStatusMeta[s].tone }));
-  const units = [
-    { label: "Water volume", claimed: `${fmtInt(summary.claimed.m3)} m³`, accepted: `${fmtInt(summary.accepted.m3)} m³`, share: summary.claimed.m3 ? summary.accepted.m3 / summary.claimed.m3 : 0 },
-    { label: "People reached", claimed: `${fmtInt(summary.claimed.people)} people`, accepted: `${fmtInt(summary.accepted.people)} people`, share: summary.claimed.people ? summary.accepted.people / summary.claimed.people : 0 },
-    {
-      label: "Pollutant mass (TSS / TN / TP)",
-      claimed: `${fmtInt(summary.claimed.kg.tss)} / ${fmtInt(summary.claimed.kg.tn)} / ${fmtInt(summary.claimed.kg.tp)} kg`,
-      accepted: `${fmtInt(summary.accepted.kg.tss)} / ${fmtInt(summary.accepted.kg.tn)} / ${fmtInt(summary.accepted.kg.tp)} kg`,
-      share: summary.claimed.kg.tss ? summary.accepted.kg.tss / summary.claimed.kg.tss : 0,
-    },
-  ];
+  const units = unitLines(summary);
 
   return (
     <>

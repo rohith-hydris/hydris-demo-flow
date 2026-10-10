@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { BAND1_NOTE, LARGE_FOOTPRINT_NOTE } from "@/src/lib/explain";
 import { fmtScore, fmtPct1 } from "@/src/lib/format";
+import { I_LARGE, R_BAND1 } from "@/src/lib/rank";
 import { headlineRisks } from "@/src/lib/risk";
 import type { Site } from "@/src/lib/selectors";
 import { PILLARS } from "@/src/lib/pwi";
@@ -48,7 +50,7 @@ export default function FactoryCard({ site }: { site: Site }) {
               <span className={bigNumber}>{fmtScore(site.R)}</span>
               <BandPill band={site.band} />
             </div>
-            <ScoreBar className="mt-2" value={site.R} tick={0.6} tone={tone} label="Risk R" valueText={`${fmtScore(site.R)} of 1, Band 1 starts at 0.60`} />
+            <ScoreBar className="mt-2" value={site.R} tick={R_BAND1} tone={tone} label="Risk R" valueText={`${fmtScore(site.R)} of 1, ${BAND1_NOTE}`} />
             <p className="mt-2 text-sm text-ink-500">{plural(site.riskCounts.present, "risk", "risks")} present, {site.riskCounts.watch} watch</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {chips.map((c) => <StatusPill key={c.code} tone="negative" shape="triangle" label={c.shortName} />)}
@@ -63,7 +65,7 @@ export default function FactoryCard({ site }: { site: Site }) {
             ) : (
               <>
                 <span className={bigNumber}>{fmtScore(site.footprintI)}</span>
-                <ScoreBar className="mt-2" value={site.footprintI} tick={0.5} label="Footprint I" valueText={`${fmtScore(site.footprintI)} of 1, a large footprint starts at 0.50`} />
+                <ScoreBar className="mt-2" value={site.footprintI} tick={I_LARGE} label="Footprint I" valueText={`${fmtScore(site.footprintI)} of 1, ${LARGE_FOOTPRINT_NOTE.toLowerCase()}`} />
               </>
             )}
             <p className="mt-2 text-sm text-ink-500">Water footprint of the site</p>

@@ -63,5 +63,10 @@ export function guideDetail(factoryId: FactoryId): GuideDetail | null {
   return { removedKg, totalKg, massShare: removedKg / totalKg, weakest: list.sort((a, b) => a.removalPct - b.removalPct)[0] };
 }
 
-export const priorMonthSitePwi = (factoryId: FactoryId): number | null =>
+/** Month-on-month change in site PWI (0 to 1 values), in percentage points to one decimal. */
+export function sitePwiChange(current: number, prior: number): { direction: "up" | "down"; points: string } {
+  return { direction: current < prior ? "down" : "up", points: (Math.round(Math.abs(current - prior) * 1000) / 10).toFixed(1) };
+}
+
+export const priorMonthSitePwi =(factoryId: FactoryId): number | null =>
   factoryId === f12Example.factoryId ? f12Example.priorMonthSitePwi : null;

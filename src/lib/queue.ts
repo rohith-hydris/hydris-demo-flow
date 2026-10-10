@@ -2,7 +2,8 @@ import { documents } from "@/src/data/documents";
 import { inspections } from "@/src/data/inspections";
 import { projects } from "@/src/data/projects";
 import type { DocumentRecord, InspectionRecord, ProjectRecord } from "@/src/data/types";
-import { PROJECT_STATUSES, projectBenefit, statusCounts, totalsByUnit, trustScore, type ProjectBenefit } from "./claims";
+import { fmtInt, fmtM3, fmtPeople } from "./format";
+import { PROJECT_STATUSES, acceptedShare, projectBenefit, statusCounts, totalsByUnit, trustScore, type ProjectBenefit } from "./claims";
 import { canSeeFactory, type Scope } from "./scope";
 import { getSites, type Site } from "./selectors";
 import type { CellGrade, ProjectStatus } from "./types";
@@ -80,6 +81,16 @@ export interface ClaimSummary {
 export function claimSummary(scope: Scope, f: Pick<QueueFilters, "supplierId" | "factoryId"> = {}): ClaimSummary {
   const list = claimRows(scope, f).map((r) => r.project);
   return { counts: statusCounts(list), total: list.length, claimed: totalsByUnit(list, "claimed"), accepted: totalsByUnit(list, "counted") };
+}
+
+/** One line per unit for the summary tiles. Units are never mixed in one total. */
+export function unitLines(s: ClaimSummary) {
+  const kg = (t: UnitTotals["kg"]) => `${fmtInt(t.tss)} / ${fmtInt(t.tn)} / ${fmtInt(t.tp)} kg`;
+  return [
+    { label: "Water volume", claimed: fmtM3(s.claimed.m3), accepted: fmtM3(s.accepted.m3), share: acceptedShare(s.claimed.m3, s.accepted.m3) },
+    { label: "People reached", claimed: fmtPeople(s.claimed.people), accepted: fmtPeople(s.accepted.people), share: acceptedShare(s.claimed.people, s.accepted.people) },
+    { label: "Pollutant mass (TSS / TN / TP)", claimed: kg(s.claimed.kg), accepted: kg(s.accepted.kg), share: acceptedShare(s.claimed.kg.tss, s.accepted.kg.tss) },
+  ];
 }
 
 // ---- Audit and compliance reports ---------------------------------------------------------------------------------

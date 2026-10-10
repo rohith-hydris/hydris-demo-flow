@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { fmtPct1, fmtScore } from "@/src/lib/format";
 import { healthBand } from "@/src/lib/ops";
-import { bandOf } from "@/src/lib/rank";
+import { R_BAND1, bandOf } from "@/src/lib/rank";
 import type { SupplierView } from "@/src/lib/selectors";
 import type { ZdhcTier } from "@/src/lib/types";
 import { BandPill, HealthPill, OffTrackChip, ScoreBar, SeverityPill, StackedBar, bandMeta, tierMeta, toSegments } from "@/src/components/ui";
@@ -41,7 +41,7 @@ export default function SupplierRow({ supplier: s }: { supplier: SupplierView })
               <span className={big}>{fmtScore(r.avgR)}</span>
               <BandPill band={band} compact />
             </div>
-            <ScoreBar className="mt-2" value={r.avgR} tick={0.6} tone={bandMeta[band].tone} label="Average risk R" valueText={fmtScore(r.avgR)} />
+            <ScoreBar className="mt-2" value={r.avgR} tick={R_BAND1} tone={bandMeta[band].tone} label="Average risk R" valueText={fmtScore(r.avgR)} />
           </Cell>
 
           <Cell title="PWI">

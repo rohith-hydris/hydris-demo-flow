@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { additionalityGate, projectBenefit } from "@/src/lib/claims";
-import { fmtInt, fmtPct1, fmtScore, fmtScore3, round } from "@/src/lib/format";
-import { GUIDE_CORRECTIONS, METHOD_VERSION, guideDetail, ledgerFor, priorMonthSitePwi, waterBalance } from "@/src/lib/impact";
+import { fmtInt, fmtPct1, fmtScore, fmtScore3 } from "@/src/lib/format";
+import { GUIDE_CORRECTIONS, METHOD_VERSION, guideDetail, ledgerFor, priorMonthSitePwi, sitePwiChange, waterBalance } from "@/src/lib/impact";
 import { fmtClaim } from "@/src/lib/measure";
 import type { Site } from "@/src/lib/selectors";
 import { cellLabel, traceConfidence, traceSitePwi, traceVolumetric } from "@/src/lib/trace";
@@ -68,7 +68,7 @@ export default function ImpactTab({ site }: { site: Site }) {
           {prior !== null && (
             <p className="mt-1 text-sm text-ink-500">
               Prior month <span className="num font-semibold text-ink-700">{fmtPct1(prior)}</span>
-              {` (${pwi.sitePwi < prior ? "down" : "up"} ${round(Math.abs(pwi.sitePwi - prior) * 100, 1).toFixed(1)} points)`}
+              {` (${sitePwiChange(pwi.sitePwi, prior).direction} ${sitePwiChange(pwi.sitePwi, prior).points} points)`}
             </p>
           )}
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { whyThisRank } from "@/src/lib/explain";
+import { RANK_RANGE_NOTE, whyThisRank } from "@/src/lib/explain";
 import { fmtPct1, fmtScore } from "@/src/lib/format";
 import type { RankRange } from "@/src/lib/rank";
 import { PILLAR_LABELS, PILLAR_KEYS } from "@/src/lib/risk";
@@ -36,7 +36,7 @@ export default function WhyRankCard({ site, scopeSites, range, weightsChanged }:
         </div>
         <div className="flex justify-between gap-2"><dt className="text-ink-700">Site PWI</dt><dd className="num font-semibold text-ink-900">{fmtPct1(site.pwi.sitePwi)}</dd></div>
       </dl>
-      <p className="mt-3 text-sm text-ink-500">Rank range is the 5th to 95th percentile over 500 draws, each weight varied by up to 20%. It is flagged unstable when wider than 3 positions.</p>
+      <p className="mt-3 text-sm text-ink-500">{RANK_RANGE_NOTE}</p>
 
       <Link href={`/factories/${site.id}`} className="btn btn-secondary mt-4">Open factory <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
     </div>

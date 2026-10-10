@@ -1,8 +1,8 @@
 "use client";
 
 import { fmtDaysAgo, fmtPct1, fmtScore } from "@/src/lib/format";
-import { whyThisRank } from "@/src/lib/explain";
-import { headlineRisks } from "@/src/lib/risk";
+import { BAND1_NOTE, LARGE_FOOTPRINT_NOTE, whyThisRank } from "@/src/lib/explain";
+import { RISK_TOTAL, headlineRisks } from "@/src/lib/risk";
 import type { Site } from "@/src/lib/selectors";
 import { traceConfidence, traceFootprint, traceRisk, traceSitePwi, type Trace } from "@/src/lib/trace";
 import { BandPill, CertPill, HealthPill, SeverityPill, StatusPill, ZdhcPill } from "@/src/components/ui";
@@ -46,10 +46,10 @@ export default function OverviewTab({ site, scopeSites, onTab }: { site: Site; s
       </div>
 
       <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Risk R" value={fmtScore(site.R)} trace={traceRisk(site)} extra={<BandPill band={site.band} />} context="Band 1 starts at 0.60" />
+        <StatTile label="Risk R" value={fmtScore(site.R)} trace={traceRisk(site)} extra={<BandPill band={site.band} />} context={BAND1_NOTE} />
         <StatTile
           label="Footprint I" value={site.footprintI === null ? "Pending" : fmtScore(site.footprintI)} trace={traceFootprint(site)}
-          context="A large footprint starts at 0.50"
+          context={LARGE_FOOTPRINT_NOTE}
         />
         <StatTile label="Site PWI" value={fmtPct1(site.pwi.sitePwi)} trace={traceSitePwi(site)} extra={<CertPill band={site.pwi.certBand} />} context="Positive Water Impact" />
         <StatTile label="Confidence" value={fmtScore(site.pwi.confidence)} trace={traceConfidence(site)} context={`Evidence grade ${site.evidenceGrade}`} />
@@ -67,7 +67,7 @@ export default function OverviewTab({ site, scopeSites, onTab }: { site: Site; s
             {chips.length > 0 && more > 0 && <span className="text-sm font-semibold text-ink-500">+{more} more</span>}
             {chips.length === 0 && <span className="text-ink-500">No site-specific risks present</span>}
           </div>
-          <button type="button" onClick={() => onTab("risk")} className="btn btn-secondary mt-4">See all 14 risks</button>
+          <button type="button" onClick={() => onTab("risk")} className="btn btn-secondary mt-4">See all {RISK_TOTAL} risks</button>
         </div>
 
         <div className="card p-6">

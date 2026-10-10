@@ -32,7 +32,13 @@ export function projectBenefit(p: ProjectRecord): ProjectBenefit {
   return { attributed, counted, low, provisional: p.status === "Pending validation" };
 }
 
-export const projectsFor = (factoryId: FactoryId) => projects.filter((p) => p.factoryId === factoryId);
+/** "Attribution share 50%" for a shared claim, or null at full attribution. */
+export const attributionNote = (p: ProjectRecord): string | null => (p.attribution < 1 ? `Attribution share ${Math.round(p.attribution * 100)}%` : null);
+
+/** Accepted as a share of claimed; 0 when nothing is claimed. */
+export const acceptedShare = (claimed: number, accepted: number) => (claimed ? accepted / claimed : 0);
+
+export const projectsFor =(factoryId: FactoryId) => projects.filter((p) => p.factoryId === factoryId);
 
 /**
  * The note shown on a claim. The data's note for a flagged claim is an internal pointer ("See validation script V1"),

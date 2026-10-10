@@ -1,5 +1,5 @@
 import { fmtScore } from "./format";
-import { I_LARGE, R_BAND1, R_BAND2 } from "./rank";
+import { I_LARGE, R_BAND1, R_BAND2, RANK_RANGE_DRAWS, RANK_RANGE_JITTER, UNSTABLE_WIDTH } from "./rank";
 import type { Site } from "./selectors";
 
 // Plain-language text generated from the data (PRODUCT 4.4 "Why this rank"). Numbers are filled in, never typed.
@@ -37,3 +37,10 @@ export function whyThisRank(site: Site, scopeSites: Site[]): string {
 
 /** Where a site sits against the two quadrant lines, for the Overview tab. */
 export const quadrantLines = { R: R_BAND1, I: I_LARGE } as const;
+
+/** Threshold notes shown next to R and I, filled from the same constants the ranking uses. */
+export const BAND1_NOTE = `Band 1 starts at ${fmtScore(R_BAND1)}`;
+export const LARGE_FOOTPRINT_NOTE = `A large footprint starts at ${fmtScore(I_LARGE)}`;
+const jitterPct = Math.round(RANK_RANGE_JITTER * 100);
+export const RANK_RANGE_NOTE = `Rank range is the 5th to 95th percentile over ${RANK_RANGE_DRAWS} draws, each weight varied by up to ${jitterPct}%. It is flagged unstable when wider than ${UNSTABLE_WIDTH} positions.`;
+export const RANK_RANGE_TITLE = `5th to 95th percentile of ${RANK_RANGE_DRAWS} draws, weights varied by ${jitterPct}%`;

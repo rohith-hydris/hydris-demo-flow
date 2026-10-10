@@ -65,6 +65,10 @@ export interface RiskResult {
   rawValue: string | null;
 }
 
+/** How many risks there are, and how many are counted (coastal eutrophication is shown separately). */
+export const RISK_TOTAL = riskCatalogue.length;
+export const RISK_COUNTED = riskCatalogue.filter((c) => c.code !== "cep").length;
+
 export function evaluateRisks(factoryId: FactoryId, s: RiskScores): RiskResult[] {
   return riskCatalogue.map((c) => {
     const score = s[c.code];
