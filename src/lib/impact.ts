@@ -37,6 +37,14 @@ const entryNumber = (id: string) => Number(id.replace(/\D/g, ""));
 export const ledgerFor = (factoryId: FactoryId): LedgerEntry[] =>
   ledger.filter((l) => l.factoryId === factoryId).sort((a, b) => entryNumber(b.id) - entryNumber(a.id));
 
+/** Water recycled or reclaimed on site: the Recycled and Reclaimed grey water lines of the P1 Availability cell. F12 only. */
+export function recycledReclaimedM3(factoryId: FactoryId): number | null {
+  if (factoryId !== f12Example.factoryId) return null;
+  const cell = f12Example.cells.find((c) => c.pillar === "P1" && c.dimension === "Availability");
+  const lines = cell?.breakdown?.filter((b) => b.label === "Recycled" || b.label === "Reclaimed grey water") ?? [];
+  return lines.reduce((sum, b) => sum + b.value, 0);
+}
+
 export interface GuideDetail {
   removedKg: number; totalKg: number;
   /** Total removed mass over total load: the Guide's mass-sum rule scores P1 Quality 1.0 when this reaches 90%. */

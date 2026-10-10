@@ -79,7 +79,7 @@ export default function PortfolioScreen() {
             <h3 className="mb-4">Network map</h3>
             <NetworkMap sites={sites} />
           </div>
-          <div className="card p-6 lg:col-span-4">
+          <div id="alerts" className="card scroll-mt-28 p-6 lg:col-span-4">
             <h3 className="mb-4">Alerts</h3>
             <AlertsFeed alerts={alerts} siteNames={siteNames} canAct={isBrand} />
           </div>

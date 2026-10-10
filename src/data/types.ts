@@ -94,6 +94,8 @@ export interface DocumentRecord {
   period: string; state: ReadinessState; detail: string;
   /** True for audit and compliance reports shown on the Claims and Evidence page. */
   isReport: boolean;
+  /** A Ready document that still needs a person to look at it (for example F01's OCEMS and lab COD variance). */
+  needsAttention?: boolean;
 }
 
 export interface InspectionStep { n: number; instruction: string; result: CheckResult; check?: string; reason?: string }
@@ -106,4 +108,6 @@ export interface InspectionRecord {
 export interface LedgerEntry {
   id: string; factoryId: FactoryId; period: string; what: string;
   entryStatus: LedgerStatus; periodStatus: Period;
+  /** The two inputs the "why did P2 drop" answer compares, taken from the entry text in PRODUCT 5.8. */
+  p2Availability?: number; desiltingFills?: number;
 }

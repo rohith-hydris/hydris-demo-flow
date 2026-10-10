@@ -4,7 +4,7 @@ import type { DocumentRecord } from "./types";
 // PRODUCT 5.11. F12 has the full list. For every other factory the spec names only the notable issues and says
 // everything else is Ready, so those factories use the same twelve documents (`standardDocuments`) with the
 // overrides below applied.
-interface Template { order: number; name: string; period: string; state: ReadinessState; detail: string; isReport: boolean }
+interface Template { order: number; name: string; period: string; state: ReadinessState; detail: string; isReport: boolean; needsAttention?: boolean }
 
 const d = (order: number, name: string, period: string, state: ReadinessState, detail = "", isReport = false): Template =>
   ({ order, name, period, state, detail, isReport });
@@ -40,12 +40,12 @@ export const standardDocuments: Template[] = [
   d(12, "Project completion certificates", "various", "Ready"),
 ];
 
-type Override = Partial<Pick<Template, "period" | "state" | "detail">>;
+type Override = Partial<Pick<Template, "period" | "state" | "detail" | "needsAttention">>;
 
 // Spec text names the issue but not always which document; the mapping choices are noted in the comments.
 const overrides: Record<FactoryId, Record<number, Override>> = {
   F01: {
-    3: { detail: "OCEMS and lab COD differ by 14%, above tolerance. Both are cited; the lab report is the source of record." },
+    3: { needsAttention: true, detail: "OCEMS and lab COD differ by 14%, above tolerance. Both are cited; the lab report is the source of record." },
     4: { state: "Failed check", detail: "44 of 52 weekly samples; at least 48 required" },
   },
   F02: { 11: { period: "2024", state: "Expired / out of period", detail: "Report is dated 2024. A current third-party audit is needed." } },

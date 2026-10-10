@@ -1,4 +1,4 @@
-import type { ProjectRecord } from "@/src/data/types";
+import type { LedgerEntry, ProjectRecord } from "@/src/data/types";
 import { projectBenefit, projectsFor } from "./claims";
 import { fmtCellScore, fmtInt, fmtPct1, fmtScore, fmtScore3, round } from "./format";
 import { METHOD_VERSION } from "./impact";
@@ -166,6 +166,22 @@ export function traceFootprint(site: Site): Trace {
     inputs: [{ label: "Impact score I", value: site.footprintI === null ? "Pending" : fmtScore(site.footprintI), cite: "Factory master" }],
     method: { name: "Site Prioritisation" }, grade: null,
     note: "In this demo I is a fixed input. How I is normalised is still open in the PRD.",
+  };
+}
+
+/** A ledger entry as a traceable figure (used by the copilot's "why did P2 drop" answer). */
+export function traceLedgerEntry(e: LedgerEntry): Trace {
+  return {
+    title: `Ledger entry ${e.id}`,
+    value: e.p2Availability !== undefined ? fmtCellScore(e.p2Availability) : e.period,
+    formula: [e.what],
+    inputs: [
+      { label: "Period", value: e.period, cite: "Impact Ledger" },
+      { label: "Entry status", value: e.entryStatus },
+      { label: "Period status", value: e.periodStatus },
+      ...(e.desiltingFills !== undefined ? [{ label: "Desilting fills per year", value: String(e.desiltingFills) }] : []),
+    ],
+    method: PWI_METHOD, grade: null,
   };
 }
 

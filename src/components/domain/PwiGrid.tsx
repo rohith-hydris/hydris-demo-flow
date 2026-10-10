@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { fmtCellScore, fmtScore3 } from "@/src/lib/format";
 import { DIMENSIONS, PILLARS, PILLAR_NAMES, type PwiCell } from "@/src/lib/pwi";
 import type { Site } from "@/src/lib/selectors";
@@ -137,16 +137,42 @@ function PillarRow({ site, pillar, row, filled, scoreOf, pillarValue, guideMode 
   );
 }
 
-/** A small, static 3 x 3 for the Overview tab: the same fill, with the score in each cell and no controls. */
-export function MiniPwiGrid({ site }: { site: Site }) {
+/** A small, static 3 x 3: the same fill, with the score in each cell and no controls. `highlight` rings the named cells. */
+export function MiniGrid({ cells, label, highlight = [], labelled = false }: {
+  cells: { pillar: Pillar; dimension: string; score: number }[]; label: string; highlight?: string[];
+  /** Adds the dimension names across the top and the pillar names down the side. */
+  labelled?: boolean;
+}) {
+  const cell = (c: { pillar: Pillar; dimension: string; score: number }) => {
+    const key = `${c.pillar} ${c.dimension}`;
+    return (
+      <div
+        key={key} data-mini-cell={key}
+        className={`relative h-14 overflow-hidden rounded-lg border bg-card ${c.score === 0 ? "border-dashed border-ink-300" : "border-line"} ${highlight.includes(key) ? "ring-2 ring-blue-600" : ""}`}
+      >
+        {c.score > 0 && <div aria-hidden="true" className="absolute inset-x-0 bottom-0" style={{ height: `${c.score * 100}%`, background: ramp(c.score) }} />}
+        <span className="num relative z-10 m-1 inline-block rounded bg-card/85 px-1 text-sm font-semibold text-ink-900">{fmtCellScore(c.score)}</span>
+      </div>
+    );
+  };
+  if (!labelled) {
+    return <div role="img" aria-label={label} className="grid grid-cols-3 gap-1.5">{PILLARS.flatMap((p) => cells.filter((c) => c.pillar === p)).map(cell)}</div>;
+  }
   return (
-    <div role="img" aria-label="Positive Water Impact grid, scores by pillar and dimension" className="grid grid-cols-3 gap-1.5">
-      {PILLARS.flatMap((p) => site.pwi.cells.filter((c) => c.pillar === p)).map((c) => (
-        <div key={`${c.pillar}${c.dimension}`} className={`relative h-14 overflow-hidden rounded-lg border bg-card ${c.score === 0 ? "border-dashed border-ink-300" : "border-line"}`}>
-          {c.score > 0 && <div aria-hidden="true" className="absolute inset-x-0 bottom-0" style={{ height: `${c.score * 100}%`, background: ramp(c.score) }} />}
-          <span className="num relative z-10 m-1 inline-block rounded bg-card/85 px-1 text-sm font-semibold text-ink-900">{fmtCellScore(c.score)}</span>
-        </div>
+    <div role="img" aria-label={label} className="grid grid-cols-[76px_repeat(3,minmax(0,1fr))] items-center gap-1.5">
+      <span aria-hidden="true" />
+      {DIMENSIONS.map((d) => <span key={d} aria-hidden="true" className="text-center text-sm text-ink-500">{d}</span>)}
+      {PILLARS.map((p) => (
+        <Fragment key={p}>
+          <span aria-hidden="true" className="text-sm font-semibold text-ink-700">{PILLAR_NAMES[p]}</span>
+          {cells.filter((c) => c.pillar === p).map(cell)}
+        </Fragment>
       ))}
     </div>
   );
 }
+
+/** The Overview tab's grid for one site. */
+export const MiniPwiGrid = ({ site }: { site: Site }) => (
+  <MiniGrid cells={site.pwi.cells} label="Positive Water Impact grid, scores by pillar and dimension" />
+);

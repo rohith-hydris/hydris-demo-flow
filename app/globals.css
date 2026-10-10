@@ -209,6 +209,8 @@ td, th, .num, .kpi { font-variant-numeric: tabular-nums; }
 @keyframes tab-fade { from { opacity: 0; } to { opacity: 1; } }
 .tab-fade { animation: tab-fade 120ms ease-out; }
 
+@keyframes gen-fill { from { width: 0; } to { width: 100%; } }
+
 @keyframes pulse-soft { 50% { opacity: 0.5; } }
 .skeleton { background: var(--blue-100); border-radius: var(--radius-tile); animation: pulse-soft 1.6s ease-in-out infinite; }
 

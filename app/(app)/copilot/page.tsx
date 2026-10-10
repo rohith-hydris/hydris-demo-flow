@@ -1,11 +1,5 @@
-import StubPage from "@/src/components/shell/StubPage";
+import CopilotPage from "@/src/components/copilot/CopilotPage";
 
-export default function CopilotPage() {
-  return (
-    <StubPage
-      titles={{ brand: "Copilot", supplier: "Copilot" }}
-      description="Ask about risk, ranking and impact. Every figure comes with its source."
-      phase="Phase 6"
-    />
-  );
+export default function Page() {
+  return <CopilotPage />;
 }
