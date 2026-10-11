@@ -18,7 +18,7 @@ export default function Footer() {
       <div className="bg-footer relative mx-auto h-[260px] max-w-[1240px] overflow-hidden rounded-t-panel text-white">
         <div className="relative z-10 flex h-full flex-col justify-between p-8">
           <div className="flex flex-wrap items-start justify-between gap-6">
-            <Logo mark="text-white" />
+            <Logo />
             <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-1">
               {links.map((l) => (
                 <Link key={l.href} href={l.href} className="inline-flex min-h-11 items-center font-semibold text-white/90 hover:text-white hover:underline">{l.label}</Link>
