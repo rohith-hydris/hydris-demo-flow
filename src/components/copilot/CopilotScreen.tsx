@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, ChevronDown, Lock, Send } from "lucide-react";
+import { useProjects } from "@/src/context/ProjectsContext";
 import { agents, scripts, type AgentId } from "@/src/data/copilotScripts";
+import { liteFindings } from "@/src/data/opportunities";
 import { suppliers } from "@/src/data/suppliers";
 import {
   PERIOD_LABEL, VALIDATION_BRAND_ONLY_REPLY, agentAllowed, agentById, buildAnswer, buildBusinessCase, copilotScope, interpretLink, interpretText, promptFor,
@@ -208,7 +210,14 @@ export default function CopilotScreen({ role }: { role: Role }) {
     thread.current?.scrollTo({ top: thread.current.scrollHeight, behavior: reducedMotion() ? "auto" : "smooth" });
   }, [messages.length, tick]);
 
-  const apply = (r: Interpretation) => {
+  const { importMany } = useProjects();
+  const apply = (r0: Interpretation) => {
+    let r = r0;
+    // C9 imports for real in the Projects state, so asking twice is answered "already imported" and Opportunities shows the result.
+    if (r.play?.script.id === "C9") {
+      const found = liteFindings.filter((f) => f.factoryId === "F12" && cscope.scope.factoryIds.includes(f.factoryId));
+      r = { ...r, play: { ...r.play, params: { ...r.play.params, lite: importMany(found) } } };
+    }
     const target = r.play?.script.routeTo ? scripts.find((s) => s.id === r.play!.script.routeTo)!.agent : r.agent;
     if (target) setAgent(target);
     setMessages((m) => [...m, ...toMessages(r, role, cscope, agent)]);

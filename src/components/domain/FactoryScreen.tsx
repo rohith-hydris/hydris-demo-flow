@@ -9,6 +9,8 @@ import { CURRENT_MONTH, REPORTING_PERIOD } from "@/src/data/tenants";
 import { fmtScore } from "@/src/lib/format";
 import { FACTORY_TABS, parseFactoryTab } from "@/src/lib/factoryTabs";
 import { getSites } from "@/src/lib/selectors";
+import { JOURNEY_FACTORY } from "@/src/lib/journey";
+import JourneyStrip from "./JourneyStrip";
 import { AppMain, StatusBandField, EmptyState, OffTrackChip, PageHeader, PeriodPill, QuadrantPill, StatusPill, TierBadge, Tabs, tabIds } from "@/src/components/ui";
 import EvidenceTab from "./EvidenceTab";
 import ImpactTab from "./ImpactTab";
@@ -79,6 +81,7 @@ export default function FactoryScreen({ factoryId }: { factoryId: string }) {
           )
         }
       >
+        {site.id === JOURNEY_FACTORY && <div className="mt-5"><JourneyStrip /></div>}
         <div className="mt-6"><Tabs tabs={[...FACTORY_TABS]} value={tab} onChange={setTab} label="Factory sections" idPrefix={ID_PREFIX} /></div>
       </PageHeader>
 

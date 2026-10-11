@@ -2,17 +2,13 @@
 
 import { CheckCheck, ClipboardCheck, FileClock } from "lucide-react";
 import { evidenceChange } from "@/src/data/affected";
-import { affectedOutputs, flaggedCount, type AffectedOutput } from "@/src/lib/affected";
+import { affectedOutputs, flaggedCount, fmtBefore, type AffectedOutput } from "@/src/lib/affected";
 import { fmtCellScore, fmtPct1 } from "@/src/lib/format";
 import type { Site } from "@/src/lib/selectors";
 import { StatusPill } from "@/src/components/ui";
 import MockAction from "./MockAction";
 
-const before = (o: AffectedOutput) => {
-  const b = o.output.before;
-  if (b.kind === "text") return b.value;
-  return o.output.kind === "ledger" ? `P2 Availability ${fmtCellScore(b.value)}` : fmtPct1(b.value);
-};
+const before = fmtBefore;
 
 function Outcome({ o }: { o: AffectedOutput }) {
   if (o.outcome === "Recalculated") return <StatusPill tone="positive" shape="circle" label={`Recalculated, ${o.calculationValidity ?? "Valid"}`} />;

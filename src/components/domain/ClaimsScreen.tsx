@@ -105,7 +105,7 @@ function InspectionItem({ row, canValidate }: { row: InspectionRow; canValidate:
   const ok = i.status === "Validated";
   return (
     <li className="card p-4">
-      <div className="grid items-center gap-x-5 gap-y-3 lg:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.5fr)_auto_auto]">
+      <div className="grid items-center gap-x-5 gap-y-3 lg:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_auto_auto]">
         <TrustRing value={trust} ok={ok} />
         <div>
           <h4>{i.id}</h4>
@@ -116,6 +116,7 @@ function InspectionItem({ row, canValidate }: { row: InspectionRow; canValidate:
           <Link href={`/factories/${site.id}?tab=evidence`} className="block truncate font-semibold text-ink-900 hover:underline">{site.name}</Link>
           <span className="block truncate text-sm text-ink-500">{site.supplierName}</span>
         </div>
+        <div className="min-w-0"><span className="block text-sm text-ink-500">Source</span><span className="block font-semibold text-ink-900">{i.source}</span></div>
         {ok ? <StatusPill tone="positive" shape="circle" label="Validated" /> : <StatusPill tone="caution" shape="diamond" label="Needs review" />}
         <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
           {canValidate ? (

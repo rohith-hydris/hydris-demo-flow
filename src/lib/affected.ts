@@ -1,4 +1,5 @@
 import { outputs, type OutputRecord } from "@/src/data/affected";
+import { fmtCellScore, fmtPct1 } from "./format";
 import type { CalculationValidity } from "./types";
 
 // V2 Section 13. A changed input flags every Draft output that used it. A Released output keeps its snapshot: it is never
@@ -30,3 +31,17 @@ export function affectedOutputs(currentSitePwi: number, currentP2Availability: n
 }
 
 export const flaggedCount = (rows: AffectedOutput[]) => rows.filter((r) => r.outcome === "Flagged for review").length;
+
+/** What an output showed when it was made, as text. */
+export function fmtBefore(o: AffectedOutput): string {
+  const b = o.output.before;
+  if (b.kind === "text") return b.value;
+  return o.output.kind === "ledger" ? `P2 Availability ${fmtCellScore(b.value)}` : fmtPct1(b.value);
+}
+
+/** One line for the state now, as the Affected outputs panel shows it. */
+export function fmtStateNow(o: AffectedOutput): string {
+  if (o.outcome === "Recalculated") return `Recalculated, ${o.calculationValidity ?? "Valid"}${o.now !== null ? ` (P2 Availability now ${fmtCellScore(o.now)})` : ""}`;
+  if (o.outcome === "Flagged for review") return `Flagged for review${o.now !== null ? ` (value now ${fmtPct1(o.now)})` : ""}`;
+  return "Not altered";
+}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { BookOpen, Copy, Target } from "lucide-react";
 import { useScope } from "@/src/context/RoleContext";
-import { catalogueItems, opportunities, type CatalogueKind } from "@/src/data/opportunities";
+import { catalogueItems, CRITERIA, opportunities, type CatalogueKind } from "@/src/data/opportunities";
 import { rankOpportunities } from "@/src/lib/catalogue";
 import { fmtScore } from "@/src/lib/format";
 import { catalogueCard, type CatalogueCardView } from "@/src/lib/projectsView";
@@ -100,7 +100,7 @@ export default function CatalogueTab() {
         <h3 className="mb-2">How opportunities are evaluated</h3>
         <ol className="list-decimal space-y-1 pl-5 text-ink-700">
           <li><span className="font-semibold">Mandatory gates first.</span> Six Pass or Fail checks. One failure makes the opportunity ineligible, whatever its score.</li>
-          <li><span className="font-semibold">Weighted attractiveness second.</span> Five criteria scored 0 to 5: impact potential 0.30, cost-effectiveness 0.25, delivery readiness and timing 0.15, measurability 0.15, community and co-benefit 0.15.</li>
+          <li><span className="font-semibold">Weighted attractiveness second.</span> Five criteria scored 0 to 5: {CRITERIA.map((c) => `${c.label.toLowerCase()} ${c.weight.toFixed(2)}`).join(", ")}.</li>
         </ol>
         <p className="mt-3 flex flex-wrap items-center gap-2 text-ink-500">
           <ProposedBadge label="Demonstration weights, rubric adaptation pending" /> <ForecastTags />

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { scenarios as seedScenarios, type ScenarioRecord } from "@/src/data/scenarios";
-import { importFinding, initialImports, type ImportMap, type ImportResult } from "@/src/lib/catalogue";
+import { importFinding, importMany as importBatch, initialImports, type ImportMap, type ImportResult, type LiteOutcome } from "@/src/lib/catalogue";
 import type { LiteFinding } from "@/src/data/opportunities";
 import { defaultBaseline, type ApprovedBaseline } from "@/src/lib/impactView";
 
@@ -15,6 +15,8 @@ interface ProjectsState {
   imports: ImportMap;
   /** Imports a finding. The same finding twice returns the existing record and creates no duplicate. */
   importLite: (f: LiteFinding) => ImportResult;
+  /** Imports several findings at once (copilot C9). Same rule: no duplicates. */
+  importMany: (fs: LiteFinding[]) => LiteOutcome[];
   scenarios: ScenarioRecord[];
   /** Saves a scenario unless one with the same opportunities already exists. Returns the saved or existing record. */
   saveScenario: (factoryId: ScenarioRecord["factoryId"], name: string, items: string[]) => { scenario: ScenarioRecord; created: boolean };
@@ -37,6 +39,12 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     return res;
   }, [imports]);
 
+  const importMany = useCallback((fs: LiteFinding[]) => {
+    const res = importBatch(imports, fs);
+    if (res.outcomes.some((o) => o.created)) setImports(res.imports);
+    return res.outcomes;
+  }, [imports]);
+
   const saveScenario = useCallback<ProjectsState["saveScenario"]>((factoryId, name, items) => {
     const key = [...items].sort().join("|");
     const existing = scenarios.find((s) => [...s.items].sort().join("|") === key);
@@ -49,7 +57,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
 
   const approve = useCallback((s: ScenarioRecord) => setApproved({ id: s.id, items: [...s.items] }), []);
 
-  const value = useMemo(() => ({ imports, importLite, scenarios, saveScenario, approved, approve }), [imports, importLite, scenarios, saveScenario, approved, approve]);
+  const value = useMemo(() => ({ imports, importLite, importMany, scenarios, saveScenario, approved, approve }), [imports, importLite, importMany, scenarios, saveScenario, approved, approve]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

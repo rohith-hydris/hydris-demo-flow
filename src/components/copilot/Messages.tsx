@@ -7,7 +7,7 @@ import type { ResolvedAnswer, ResolvedBlock, ResolvedCase } from "@/src/lib/copi
 import type { AgentId } from "@/src/data/copilotScripts";
 import type { Role } from "@/src/lib/roles";
 import { AgentAvatar } from "./agentUi";
-import { AvgGridBlock, ActionsBlock, CitationsBlock, OffTrackBlock, RankingBlock, RichText, TableBlock, TechTableBlock, type LocalDone } from "./blocks";
+import { AffectedBlock, LiteImportBlock, AvgGridBlock, ActionsBlock, CitationsBlock, OffTrackBlock, RankingBlock, RichText, TableBlock, TechTableBlock, type LocalDone } from "./blocks";
 import { BrsrBlock } from "./BrsrBlock";
 import { BusinessCaseCard } from "./BusinessCaseCard";
 import { ChecklistBlock, InspectionBlock } from "./ChecklistBlock";
@@ -79,6 +79,8 @@ function BlockView({ block, role, onLocal }: { block: ResolvedBlock; role: Role;
     case "ranking": return <RankingBlock block={block} />;
     case "avgGrid": return <AvgGridBlock block={block} />;
     case "table": return <TableBlock block={block} />;
+    case "affected": return <AffectedBlock block={block} />;
+    case "liteImport": return <LiteImportBlock block={block} />;
     case "offTrack": return <OffTrackBlock block={block} />;
     case "techTable": return <TechTableBlock block={block} />;
     case "checklist": return <ChecklistBlock block={block} />;

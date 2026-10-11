@@ -5,6 +5,8 @@ import { useRole, useScope } from "@/src/context/RoleContext";
 import { REPORTING_PERIOD } from "@/src/data/tenants";
 import { tenantFor } from "@/src/lib/roles";
 import { AppMain, PageHeader, Tabs, tabIds } from "@/src/components/ui";
+import { STEP_FOR_PROJECTS_TAB } from "@/src/lib/journey";
+import JourneyStrip from "./JourneyStrip";
 import CatalogueTab from "./CatalogueTab";
 import OpportunitiesTab from "./OpportunitiesTab";
 import ScenariosTab from "./ScenariosTab";
@@ -35,6 +37,7 @@ export default function ProjectsScreen() {
         meta={<p className="text-ink-500">{tenant.name} · {scope.factoryIds.length} factories · {REPORTING_PERIOD.label}</p>}
       />
       <AppMain>
+        <div className="mb-5"><JourneyStrip current={STEP_FOR_PROJECTS_TAB[tab]} /></div>
         <Tabs tabs={TABS} value={tab} idPrefix={PREFIX} label="Projects sections" onChange={(id) => router.replace(`${pathname}?tab=${id}`, { scroll: false })} />
         <div role="tabpanel" id={tabIds(PREFIX, tab).panel} aria-labelledby={tabIds(PREFIX, tab).tab} className="mt-6">
           {tab === "opportunities" && <OpportunitiesTab />}

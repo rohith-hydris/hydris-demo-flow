@@ -8,7 +8,7 @@ import type { CheckResult, ReviewStates } from "@/src/lib/types";
 // that the spec states as a finding ("2 of 5 photos match images already submitted for another claim").
 
 export type AgentId = "copilot" | "evidence" | "validation";
-export type ScriptId = "C1" | "C2" | "C3" | "C4" | "C5" | "C6" | "V1" | "V2" | "V3" | "V4" | "V5" | "E1" | "E2";
+export type ScriptId = "C1" | "C2" | "C3" | "C4" | "C5" | "C6" | "C7" | "C8" | "C9" | "V1" | "V2" | "V3" | "V4" | "V5" | "E1" | "E2";
 
 export interface AgentDef { id: AgentId; name: string; blurb: string; brandOnly: boolean; placeholder: string }
 
@@ -51,6 +51,8 @@ export type BlockSpec =
   | { kind: "techTable" }
   | { kind: "checklist"; title: string; /** V2 14: the five states this verdict sets. Others are unchanged. */ states: Partial<ReviewStates>; /** Project whose current states fill the unchanged rows. */ project?: string; checks: CheckSpec[]; verdict: { label: string; tone: "negative" | "caution" | "positive" | "neutral"; effect: string } }
   | { kind: "inspection"; id: string; states: Partial<ReviewStates> }
+  | { kind: "affected" }
+  | { kind: "liteImport" }
   | { kind: "readiness" }
   | { kind: "brsr" }
   | { kind: "gapReport" }
@@ -102,6 +104,7 @@ export const scripts: ScriptDef[] = [
       { kind: "avgGrid" },
       { kind: "text", text: "The weakest area {{scope.phrase}} is **{{weakest.1.label}}** (average cell score {{weakest.1.avg}}), followed by **{{weakest.2.label}}** ({{weakest.2.avg}})." },
       { kind: "text", when: { site: "F12" }, text: "The next best project for {{site.F12.name}} is a basin Quality project (P3 Quality scores {{F12.P3Q}} today because none is registered)." },
+      { kind: "text", when: { site: "F12" }, text: "{{site.F12.name}} sits in the internal status band **{{F12.statusBand}}**. Internal status. Not an external certification." },
       { kind: "text", text: "No site is Net Positive. A client-facing claim needs external assurance." },
       { kind: "citations", items: [{ label: "Module 03 · Impact", href: "/factories/F12?tab=impact" }, { label: "Impact Ledger", href: "/factories/F12?tab=impact" }] },
       { kind: "actions", items: [{ kind: "navigate", label: "Open factory", href: "/factories/F12?tab=impact" }] },
@@ -159,6 +162,49 @@ export const scripts: ScriptDef[] = [
           { kind: "navigate", label: "Open factory", href: "/factories/F04" },
         ],
       },
+    ],
+  },
+
+  // ============================================================ V2 addendum scripts (section 15)
+  {
+    id: "C7", agent: "copilot", roles: ["brand", "supplier"], short: "Which projects close Ambattur gaps?",
+    prompt: "Which projects would close Ambattur's gaps?",
+    match: [["projects", "gaps"], ["project", "close", "gap"], ["close", "gaps"], ["scenarios"]],
+    tools: ["get_scenarios", "get_pwi_grid"], requiresSite: "F12",
+    blocks: [
+      { kind: "text", text: "I compared three scenarios for **{{site.F12.name}}** with the no-project baseline (PWI {{scenario.S0.pwi}}, volumetric balance {{scenario.S0.balance}}). Every figure is a **Forecast** and a **Demo estimate**, not a measured result." },
+      {
+        kind: "table", columns: ["Scenario", "Opportunities", "Site PWI forecast (low)", "Volumetric balance (low)", "Capex", "Payback"],
+        rows: ["S1", "S2", "S3"].map((id) => [`${id} {{scenario.${id}.name}}`, `{{scenario.${id}.items}}`, `{{scenario.${id}.pwiBoth}}`, `{{scenario.${id}.balanceBoth}}`, `{{scenario.${id}.capex}}`, `{{scenario.${id}.payback}}`]),
+      },
+      { kind: "text", text: "**Efficiency and reuse (S2) raise volumetric balance** ({{scenario.insight.reuseBalance}} points) **but barely move PWI** ({{scenario.insight.reusePwi}} points), because P1 Availability is already near its cap. **Basin projects move PWI** ({{scenario.insight.basinPwi}} points under S1). Where there is no financial payback, the stewardship value still counts." },
+      { kind: "citations", items: [{ label: "Module 03 · Impact", href: "/factories/F12?tab=impact" }, { label: "Scenarios S1 to S3", href: "/projects?tab=scenarios" }, { label: "Demo estimates" }] },
+      { kind: "actions", items: [{ kind: "navigate", label: "Open scenarios", href: "/projects?tab=scenarios", primary: true }] },
+    ],
+  },
+  {
+    id: "C8", agent: "copilot", roles: ["brand", "supplier"], short: "What changed since the BRSR report?",
+    prompt: "What changed since the BRSR report was released?",
+    match: [["since", "brsr"], ["changed", "brsr"], ["brsr", "released"], ["what changed"]],
+    tools: ["get_ledger_diff", "get_affected_outputs"], requiresSite: "F12",
+    blocks: [
+      { kind: "text", text: "The released **BRSR Principle 6 FY2025-26** snapshot is **unchanged**. The IMD rainfall update ({{ledger.LE-2347.id}}) changed PRJ-101 desilting from {{affected.fillsBefore}} to {{affected.fillsAfter}} fills per year, and **{{affected.flagged}} draft outputs are flagged for review**." },
+      { kind: "affected" },
+      { kind: "text", text: "{{affected.banner}}" },
+      { kind: "citations", items: [{ label: "LE-2347", trace: { kind: "ledger", id: "LE-2347" } }, { label: "Affected outputs", href: "/factories/F12?tab=impact" }] },
+      { kind: "actions", items: [{ kind: "navigate", label: "Open affected outputs", href: "/factories/F12?tab=impact", primary: true }] },
+    ],
+  },
+  {
+    id: "C9", agent: "copilot", roles: ["brand", "supplier"], short: "Import the Lite findings",
+    prompt: "Import the Lite findings for Ambattur",
+    match: [["import", "lite"], ["lite", "findings"], ["import", "findings"]],
+    tools: ["list_lite_findings", "import_opportunity"], requiresSite: "F12",
+    blocks: [
+      { kind: "text", text: "{{lite.summary}}" },
+      { kind: "liteImport" },
+      { kind: "citations", items: [{ label: "LA-0187 (12 Aug 2026)" }, { label: "Projects · Opportunities", href: "/projects?tab=opportunities" }] },
+      { kind: "actions", items: [{ kind: "navigate", label: "Open opportunities", href: "/projects?tab=opportunities", primary: true }] },
     ],
   },
 

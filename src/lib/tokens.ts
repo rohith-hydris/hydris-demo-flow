@@ -6,6 +6,13 @@ import { projects } from "@/src/data/projects";
 import { suppliers } from "@/src/data/suppliers";
 import { pilot, technologies, type Technology } from "@/src/data/copilotScripts";
 import { projectBenefit, trustScore } from "./claims";
+import { evidenceChange } from "@/src/data/affected";
+import { liteFindings } from "@/src/data/opportunities";
+import { scenarios } from "@/src/data/scenarios";
+import { affectedOutputs, flaggedCount, RESTATEMENT_BANNER } from "./affected";
+import { initialImports, importMany, type LiteOutcome } from "./catalogue";
+import { fmtLakh } from "./projectsView";
+import { evaluateScenario, paybackLabel, reuseInsight } from "./scenarios";
 import { fmtCellScore, fmtInt, fmtPct1, fmtScore, fmtScore3 } from "./format";
 import { priorMonthSitePwi, recycledReclaimedM3, waterBalance } from "./impact";
 import { fmtClaim } from "./measure";
@@ -39,7 +46,7 @@ export interface TokenCtx {
   sites: Site[];
   portfolio: Portfolio;
   /** Chosen by the question: the factory a BRSR draft is for, the supplier a gap report is for. */
-  params: { factoryId?: string; supplierId?: string };
+  params: { factoryId?: string; supplierId?: string; /** Outcome of the Lite import the question just made (C9). */ lite?: LiteOutcome[] };
 }
 
 export function makeTokenCtx(cscope: CopilotScope, params: TokenCtx["params"] = {}): TokenCtx {
@@ -88,6 +95,7 @@ function siteToken(ctx: TokenCtx, id: string, rest: string[], path: string): str
       if (p === null) throw new TokenError("unknown", path);
       return fmtPct1(p);
     }
+    case "statusBand": return s.pwi.statusBand;
     case "vb": return fmtPct1(s.pwi.volumetricBalance);
     case "conf": return fmtScore(s.pwi.confidence);
     case "grade": return s.evidenceGrade;
@@ -116,6 +124,13 @@ const rankedCells = (ctx: TokenCtx) => {
   }
   return rows.sort((a, b) => a.avg - b.avg);
 };
+
+/** Lite findings for Ambattur in scope, imported (or found already imported). Uses the outcome the screen passed, else a fresh import. */
+export function liteOutcomes(ctx: TokenCtx): LiteOutcome[] {
+  if (ctx.params.lite) return ctx.params.lite;
+  const findings = liteFindings.filter((f) => f.factoryId === "F12" && ctx.cscope.scope.factoryIds.includes(f.factoryId));
+  return importMany(initialImports(), findings).outcomes;
+}
 
 /** Plants that are off-track in scope: most severe first, then by rank. */
 export function offTrackSites(ctx: TokenCtx): Site[] {
@@ -286,6 +301,55 @@ function resolveParts(ctx: TokenCtx, parts: string[], path: string): string {
         case "thirdParty": return kl(bySource("Third-party"));
         default: throw new TokenError("unknown", path);
       }
+    }
+    case "scenario": {
+      const site = siteOf(ctx, "F12", path);
+      const run = (id: string) => {
+        const sc = scenarios.find((x) => x.id === id);
+        if (!sc) throw new TokenError("unknown", path);
+        return { sc, r: evaluateScenario(site.pwi, site.replenishmentNeededM3, sc.items) };
+      };
+      if (rest[0] === "insight") {
+        const i = reuseInsight(run("S2").r, run("S1").r);
+        const pts = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}`;
+        switch (rest[1]) {
+          case "reuseBalance": return pts(i.reuseBalanceGain);
+          case "reusePwi": return pts(i.reusePwiGain);
+          case "basinPwi": return pts(i.basinPwiGain);
+          default: throw new TokenError("unknown", path);
+        }
+      }
+      const { sc, r } = run(rest[0]);
+      switch (rest[1]) {
+        case "name": return sc.name;
+        case "items": return sc.items.length ? sc.items.join(" + ") : "None";
+        case "pwi": return fmtPct1(r.pwi);
+        case "pwiLow": return fmtPct1(r.pwiLow);
+        case "pwiBoth": return `${fmtPct1(r.pwi)} (${fmtPct1(r.pwiLow)})`;
+        case "balance": return fmtPct1(r.volumetricBalance);
+        case "balanceBoth": return `${fmtPct1(r.volumetricBalance)} (${fmtPct1(r.volumetricBalanceLow)})`;
+        case "capex": return fmtLakh(r.capexLakh);
+        case "payback": return paybackLabel(r.payback);
+        default: throw new TokenError("unknown", path);
+      }
+    }
+    case "affected": {
+      const site = siteOf(ctx, evidenceChange.factoryId, path);
+      switch (rest[0]) {
+        case "flagged": return String(flaggedCount(affectedOutputs(site.pwi.sitePwi, site.pwi.cells.find((c) => c.pillar === "P2" && c.dimension === "Availability")!.score)));
+        case "fillsBefore": return String(evidenceChange.fillsBefore);
+        case "fillsAfter": return String(evidenceChange.fillsAfter);
+        case "banner": return RESTATEMENT_BANNER;
+        default: throw new TokenError("unknown", path);
+      }
+    }
+    case "lite": {
+      if (rest[0] !== "summary") throw new TokenError("unknown", path);
+      const out = liteOutcomes(ctx);
+      if (out.length === 0) return "There are no Lite findings to import in this scope.";
+      if (out.every((o) => !o.created)) return out.length === 2 ? "Both are already imported. No duplicates were created." : "All are already imported. No duplicates were created.";
+      if (out.every((o) => o.created)) return `Imported ${join(out.map((o) => `**${o.findingId}**`))} as project opportunities.`;
+      return `Imported ${join(out.filter((o) => o.created).map((o) => `**${o.findingId}**`))}. The rest were already imported, so no duplicates were created.`;
     }
     case "brsr":
       if (rest[0] === "site") return siteOf(ctx, ctx.params.factoryId ?? "F12", path).name;

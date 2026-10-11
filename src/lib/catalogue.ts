@@ -44,3 +44,17 @@ export function importFinding(imports: ImportMap, finding: LiteFinding): ImportR
 
 /** Lineage strip (V2 10): Lite finding, Opportunity, Scenario, Business case, Delivery, Measured result. */
 export const LINEAGE_STEPS = ["Lite finding", "Opportunity", "Scenario", "Business case", "Delivery", "Measured result"] as const;
+
+/** One finding's outcome in a batch import (used by copilot script C9). */
+export interface LiteOutcome { findingId: string; finding: string; opportunityId: string; created: boolean }
+
+/** Imports several findings in order. Each one is idempotent, so asking again creates nothing new. */
+export function importMany(imports: ImportMap, findings: LiteFinding[]): { imports: ImportMap; outcomes: LiteOutcome[] } {
+  let current = imports;
+  const outcomes = findings.map((f) => {
+    const r = importFinding(current, f);
+    current = r.imports;
+    return { findingId: f.id, finding: f.finding, opportunityId: r.opportunityId, created: r.created };
+  });
+  return { imports: current, outcomes };
+}

@@ -17,7 +17,7 @@ interface Handled { acknowledged: boolean; assignee: string | null }
  * Alerts feed (PRODUCT 4.2). The brand can Acknowledge or Assign an alert; that is local state only and resets on reload.
  * Pass `canAct={false}` for the supplier role, which can read alerts but not triage them.
  */
-export default function AlertsFeed({ alerts, siteNames, canAct }: { alerts: Alert[]; siteNames: Record<string, string>; canAct: boolean }) {
+export default function AlertsFeed({ alerts, siteNames, canAct, empty }: { alerts: Alert[]; siteNames: Record<string, string>; canAct: boolean; empty?: { title: string; text: string } }) {
   const [handled, setHandled] = useState<Record<string, Handled>>({});
   const [menu, setMenu] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -26,7 +26,7 @@ export default function AlertsFeed({ alerts, siteNames, canAct }: { alerts: Aler
   const update = (id: string, patch: Partial<Handled>) =>
     setHandled((h) => ({ ...h, [id]: { ...(h[id] ?? { acknowledged: false, assignee: null }), ...patch } }));
 
-  if (alerts.length === 0) return <EmptyState title="No open alerts" text="Every plant in view is running without an open alert." />;
+  if (alerts.length === 0) return <EmptyState title={empty?.title ?? "No open alerts"} text={empty?.text ?? "Every plant in view is running without an open alert."} />;
 
   const visible = showAll ? alerts : alerts.slice(0, COLLAPSED);
   return (

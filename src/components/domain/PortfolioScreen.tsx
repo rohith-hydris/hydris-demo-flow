@@ -9,7 +9,7 @@ import { tenantFor } from "@/src/lib/roles";
 import { getAlerts, getPortfolio, getSites, getSuppliers } from "@/src/lib/selectors";
 import { filterByBand, parseBand, parseSiteSort, parseSupplierSort, sortSites, sortSuppliers } from "@/src/lib/sort";
 import { AppMain, EmptyState, FilterChips, KpiGrid, PageHeader, SelectControl, Section } from "@/src/components/ui";
-import AlertsFeed from "./AlertsFeed";
+import AlertsPanel from "./AlertsPanel";
 import FactoryCard from "./FactoryCard";
 import NetworkMap from "./NetworkMap";
 import SupplierRow from "./SupplierRow";
@@ -81,7 +81,7 @@ export default function PortfolioScreen() {
           </div>
           <div id="alerts" className="card scroll-mt-28 p-6 lg:col-span-4">
             <h3 className="mb-4">Alerts</h3>
-            <AlertsFeed alerts={alerts} siteNames={siteNames} canAct={isBrand} />
+            <AlertsPanel alerts={alerts} siteNames={siteNames} canAct={isBrand} />
           </div>
         </div>
 

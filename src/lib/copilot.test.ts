@@ -144,7 +144,9 @@ describe("scripts C1 to C6 (PRODUCT 7)", () => {
     expect(block(a, "avgGrid").cells).toHaveLength(9);
     expect(texts(a)[1]).toBe("The weakest area across the network is **P3 Basin Quality** (average cell score 0.28), followed by **P3 Basin Availability** (0.48).");
     expect(texts(a)[2]).toBe("The next best project for Ambattur Denim Unit is a basin Quality project (P3 Quality scores 0.00 today because none is registered).");
-    expect(texts(a)[3]).toBe("No site is Net Positive. A client-facing claim needs external assurance.");
+    expect(texts(a)[3]).toBe("Ambattur Denim Unit sits in the internal status band **In progress**. Internal status. Not an external certification.");
+    expect(texts(a)[4]).toBe("No site is Net Positive. A client-facing claim needs external assurance.");
+    expect(texts(a)[3]).toContain("internal status band");
     expect(block(a, "citations").items.map((c) => c.label)).toEqual(["Module 03 · Impact", "Impact Ledger"]);
   });
 
@@ -493,14 +495,14 @@ describe("agents, prompts and scope", () => {
     expect(agentAllowed("copilot", "supplier")).toBe(true);
   });
 
-  it("brand: six Copilot prompts, two Evidence prompts, five Validation prompts, in the spec order", () => {
-    expect(suggestedScripts("copilot", "brand", brandScope).map((s) => s.id)).toEqual(["C1", "C2", "C3", "C4", "C5", "C6"]);
+  it("brand: nine Copilot prompts, two Evidence prompts, five Validation prompts, in the spec order", () => {
+    expect(suggestedScripts("copilot", "brand", brandScope).map((s) => s.id)).toEqual(["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"]);
     expect(suggestedScripts("evidence", "brand", brandScope).map((s) => s.id)).toEqual(["E1", "E2"]);
     expect(suggestedScripts("validation", "brand", brandScope).map((s) => s.id)).toEqual(["V1", "V2", "V4", "V3", "V5"].sort((a, b) => ["V1", "V2", "V3", "V4", "V5"].indexOf(a) - ["V1", "V2", "V3", "V4", "V5"].indexOf(b)));
   });
 
-  it("supplier: Copilot offers C1 to C4, Evidence offers both, Validation offers none", () => {
-    expect(suggestedScripts("copilot", "supplier", ownScope).map((s) => s.id)).toEqual(["C1", "C2", "C3", "C4"]);
+  it("supplier: Copilot offers C1 to C4 and C7 to C9, Evidence offers both, Validation offers none", () => {
+    expect(suggestedScripts("copilot", "supplier", ownScope).map((s) => s.id)).toEqual(["C1", "C2", "C3", "C4", "C7", "C8", "C9"]);
     expect(suggestedScripts("evidence", "supplier", ownScope).map((s) => s.id)).toEqual(["E1", "E2"]);
     expect(suggestedScripts("validation", "supplier", ownScope)).toEqual([]);
   });

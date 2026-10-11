@@ -54,7 +54,7 @@ function InspectionRow({ i, canValidate }: { i: InspectionRecord; canValidate: b
       <TrustRing value={score} ok={ok} />
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-ink-900">{i.id} <span className="font-normal text-ink-500">· {i.date}</span></p>
-        <p className="text-sm text-ink-500">{i.passed} of {i.steps} steps passed</p>
+        <p className="text-sm text-ink-500">{i.passed} of {i.steps} steps passed · Source: {i.source}</p>
         <StateStrip states={inspectionStates(i.status)} className="mt-1.5" />
         <div className="mt-1.5">{ok ? <StatusPill tone="positive" shape="circle" label="Validated" /> : <StatusPill tone="caution" shape="diamond" label="Needs review" />}</div>
       </div>

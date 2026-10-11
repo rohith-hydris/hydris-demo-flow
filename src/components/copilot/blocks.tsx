@@ -36,6 +36,39 @@ export function RankingBlock({ block }: { block: B<"ranking"> }) {
   );
 }
 
+export function AffectedBlock({ block }: { block: B<"affected"> }) {
+  return (
+    <div className="overflow-x-auto rounded-tile border border-line">
+      <table className="w-full min-w-[480px]">
+        <caption className="sr-only">Outputs affected by the changed evidence</caption>
+        <thead className="bg-blue-50"><tr><th className={th}>Output</th><th className={th}>Before</th><th className={th}>State now</th></tr></thead>
+        <tbody className="divide-y divide-line">
+          {block.rows.map((r) => (
+            <tr key={r.label}>
+              <td className={`${td} font-semibold`}>{r.label}</td>
+              <td className={`${td} num`}>{r.before}</td>
+              <td className={td}>{r.tone === "caution" ? <StatusPill tone="caution" shape="diamond" label={r.state} wrap /> : r.tone === "positive" ? <StatusPill tone="positive" shape="circle" label={r.state} wrap /> : <StatusPill tone="neutral" shape="square" label={r.state} wrap />}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function LiteImportBlock({ block }: { block: B<"liteImport"> }) {
+  return (
+    <ul className="divide-y divide-line rounded-tile border border-line">
+      {block.rows.map((r) => (
+        <li key={r.findingId} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+          <span className="min-w-0"><span className="font-semibold text-ink-900">{r.findingId}</span> <span className="text-ink-700">{r.finding}</span></span>
+          {r.created ? <StatusPill tone="positive" shape="circle" label={`Imported as ${r.opportunityId}`} /> : <StatusPill tone="info" shape="ring" label={`Already imported as ${r.opportunityId}`} />}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function AvgGridBlock({ block }: { block: B<"avgGrid"> }) {
   return (
     <div className="rounded-tile border border-line bg-blue-50 p-4">

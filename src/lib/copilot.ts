@@ -10,13 +10,14 @@ import { suppliers } from "@/src/data/suppliers";
 import { SUPPLIER_TENANT } from "@/src/data/tenants";
 import type { DocumentRecord, InspectionStep } from "@/src/data/types";
 import { documentsForFactory, readinessCounts, trustScore } from "./claims";
+import { affectedOutputs, fmtBefore, fmtStateNow } from "./affected";
 import { fmtDaysAgo, fmtScore } from "./format";
 import { waterBalance } from "./impact";
 import { PILLAR_NAMES, DIMENSIONS, PILLARS } from "./pwi";
 import type { Role } from "./roles";
 import { OUT_OF_SCOPE_REPLY, VALIDATION_BRAND_ONLY_REPLY, scopeFor, type Scope } from "./scope";
 import { GRADE_MEANING, traceLedgerEntry, type Trace } from "./trace";
-import { fillTokens, makeTokenCtx, offTrackSites, rankedTechnologies, tokensIn, type CopilotScope, type TokenCtx } from "./tokens";
+import { fillTokens, liteOutcomes, makeTokenCtx, offTrackSites, rankedTechnologies, tokensIn, type CopilotScope, type TokenCtx } from "./tokens";
 import type { Band, Dimension, Pillar, Quadrant, ReadinessState, Severity, Tier } from "./types";
 import { severityRank } from "./ops";
 import { VERDICT_CLOSING, stateEffects, type StateEffect } from "./states";
@@ -58,7 +59,7 @@ export function suggestedScripts(agent: AgentId, role: Role, cscope: CopilotScop
 }
 
 // ---- Reading a question ----------------------------------------------------------------------------------------------------
-export interface PlayRequest { script: ScriptDef; params: { factoryId?: string; supplierId?: string } }
+export interface PlayRequest { script: ScriptDef; params: TokenCtx["params"] }
 export interface Interpretation {
   /** Switch to this agent first. */
   agent?: AgentId;
@@ -209,6 +210,8 @@ export type ResolvedBlock =
   | { kind: "offTrack"; groups: { supplier: string; plants: { id: string; name: string; severity: Severity; message: string; age: string | null }[] }[] }
   | { kind: "techTable"; weights: string; rows: { name: string; technicalFit: string; expectedBenefit: string; stability: string; dataQuality: string; match: string; note: string | null; top: boolean }[] }
   | { kind: "checklist"; title: string; checks: { name: string; result: "Pass" | "Warn" | "Fail"; reason?: string }[]; verdict: { label: string; tone: "negative" | "caution" | "positive" | "neutral"; effect: string }; stateEffects: StateEffect[]; closing: string }
+  | { kind: "affected"; rows: { label: string; before: string; state: string; tone: "positive" | "caution" | "neutral" }[] }
+  | { kind: "liteImport"; rows: { findingId: string; finding: string; opportunityId: string; created: boolean }[] }
   | { kind: "inspection"; stateEffects: StateEffect[]; closing: string; id: string; factory: string; date: string; steps: number; passed: number; trust: number; status: string; counts: { pass: number; warn: number; fail: number }; nonPass: InspectionStep[]; layers: string[] }
   | { kind: "brsr"; available: boolean; factoryId: string; factoryName: string; docs: DocumentRecord[]; gaps: Gap[]; draft: { title: string; sentences: { id: string; text: string; cite: string; trace: Trace }[]; footer: string } }
   | { kind: "gapReport"; supplierName: string; factories: { id: string; name: string; counts: Record<ReadinessState, number> }[]; gaps: GapRow[] }
@@ -369,6 +372,12 @@ function buildBlock(spec: BlockSpec, ctx: TokenCtx): ResolvedBlock | null {
         nonPass: detail, layers: LAYERS,
       };
     }
+    case "affected": {
+      const s = ctx.sites.find((x) => x.id === "F12")!;
+      const rows = affectedOutputs(s.pwi.sitePwi, s.pwi.cells.find((c) => c.pillar === "P2" && c.dimension === "Availability")!.score);
+      return { kind: "affected", rows: rows.map((r) => ({ label: r.output.label, before: fmtBefore(r), state: fmtStateNow(r), tone: r.outcome === "Recalculated" ? "positive" : r.outcome === "Flagged for review" ? "caution" : "neutral" })) };
+    }
+    case "liteImport": return { kind: "liteImport", rows: liteOutcomes(ctx) };
     case "readiness": return null;
     case "brsr": return brsrBlock(ctx);
     case "gapReport": return gapReportBlock(ctx);
