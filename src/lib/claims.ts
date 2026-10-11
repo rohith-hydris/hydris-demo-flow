@@ -3,6 +3,7 @@ import { inspections } from "@/src/data/inspections";
 import { projects } from "@/src/data/projects";
 import type { ClaimAmount, DocumentRecord, InspectionRecord, ProjectRecord } from "@/src/data/types";
 import { lowValue } from "./pwi";
+import { countsTowardPwi } from "./states";
 import type { FactoryId, ProjectStatus, ReadinessState } from "./types";
 
 // PRODUCT 4.4 (Projects, Evidence), 4.6 (Claims) and 5.10 to 5.11. Counted and low values are computed here.
@@ -26,7 +27,8 @@ const scale = (a: ClaimAmount, k: number): ClaimAmount =>
 
 export function projectBenefit(p: ProjectRecord): ProjectBenefit {
   const attributed = scale(p.claim, p.attribution);
-  const counts = p.status === "Validated";
+  // V2 Section 2: a benefit counts only when it is Validated on an eligible claim. Evidence acceptance alone never counts it.
+  const counts = countsTowardPwi(p.states);
   const counted = counts ? attributed : scale(attributed, 0);
   const low = counts ? scale(attributed, lowValue(1, p.grade)) : scale(attributed, 0);
   return { attributed, counted, low, provisional: p.status === "Pending validation" };
@@ -85,6 +87,15 @@ export const documentsForFactory = (factoryId: FactoryId): DocumentRecord[] => d
 
 export function readinessCounts(list: DocumentRecord[]): Record<ReadinessState, number> {
   return Object.fromEntries(READINESS_STATES.map((s) => [s, list.filter((d) => d.state === s).length])) as Record<ReadinessState, number>;
+}
+
+/**
+ * Readiness (V2 4.2): the share of a factory's documents that are Ready. Informational. It informs delivery sequencing only
+ * and never filters, sorts by default, or reduces rank. 0 when a factory has no documents.
+ */
+export function readinessShare(factoryId: FactoryId): number {
+  const list = documentsForFactory(factoryId);
+  return list.length ? list.filter((d) => d.state === "Ready").length / list.length : 0;
 }
 
 /** Trust score of a field inspection: steps passed over steps taken. */

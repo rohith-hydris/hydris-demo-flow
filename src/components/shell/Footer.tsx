@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { METHODOLOGY_PATH } from "@/src/lib/methodology";
 import { Logo } from "./Logo";
 
 const links = [
   { href: "/portfolio", label: "Portfolio" },
   { href: "/ranking", label: "Ranking" },
+  { href: "/impact", label: "Impact" },
   { href: "/claims", label: "Claims & Evidence" },
   { href: "/copilot", label: "Copilot" },
+  { href: METHODOLOGY_PATH, label: "Methodology" },
 ];
 
 // Blue block with a ghosted HYDRIS wordmark cropped by the bottom edge (DESIGN 3.2). About 260px tall.

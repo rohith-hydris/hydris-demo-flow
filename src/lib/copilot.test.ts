@@ -120,7 +120,7 @@ describe("data cross-checks the scripts rely on", () => {
     expect(recycledReclaimedM3("F01")).toBeNull();
   });
   it("no site is Self-certified, so 'No site is Net Positive' is true of the data", () => {
-    expect(getSites(scopeFor("brand")).filter((s) => s.pwi.certBand === "Self-certified")).toHaveLength(0);
+    expect(getSites(scopeFor("brand")).filter((s) => s.pwi.statusBand === "Self-certified")).toHaveLength(0);
   });
 });
 

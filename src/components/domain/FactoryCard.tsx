@@ -7,7 +7,7 @@ import { headlineRisks } from "@/src/lib/risk";
 import type { Site } from "@/src/lib/selectors";
 import { PILLARS } from "@/src/lib/pwi";
 import {
-  BandPill, CertPill, HealthPill, OffTrackChip, QuadrantPill, RankBadge, ScoreBar, SeverityPill, StatusPill, TierBadge, ZdhcPill, bandMeta,
+  BandPill, StatusBandField, HealthPill, OffTrackChip, QuadrantPill, RankBadge, ScoreBar, SeverityPill, StatusPill, TierBadge, ZdhcPill, bandMeta,
 } from "@/src/components/ui";
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -74,8 +74,8 @@ export default function FactoryCard({ site }: { site: Site }) {
           <Block title="Positive Water Impact (PWI)">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className={bigNumber}>{fmtPct1(site.pwi.sitePwi)}</span>
-              <CertPill band={site.pwi.certBand} />
             </div>
+            <div className="mt-2"><StatusBandField band={site.pwi.statusBand} /></div>
             <ScoreBar className="mt-2" value={site.pwi.sitePwi} label="Site PWI" valueText={fmtPct1(site.pwi.sitePwi)} />
             <p className="mt-2 text-sm text-ink-500">Confidence {fmtScore(site.pwi.confidence)}</p>
             <ul className="mt-2 space-y-1.5">

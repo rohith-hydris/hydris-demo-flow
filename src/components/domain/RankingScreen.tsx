@@ -7,6 +7,7 @@ import { DEFAULT_WEIGHTS, type Weights } from "@/src/lib/risk";
 import { tenantFor } from "@/src/lib/roles";
 import { getRankRanges, getSites } from "@/src/lib/selectors";
 import { isDefaultWeights } from "@/src/lib/weights";
+import { COVERAGE_READINESS_NOTE } from "@/src/lib/statusCopy";
 import { AppMain, PageHeader, Section } from "@/src/components/ui";
 import QuadrantScatter from "./QuadrantScatter";
 import RankTable from "./RankTable";
@@ -71,6 +72,7 @@ export default function RankingScreen() {
 
         <Section title="Ranked sites" hint="Band first, then footprint. The rank range shows how steady each rank is when the weights move.">
           <RankTable sites={sites} ranges={ranges} deltas={deltas} selectedId={selected?.id ?? null} onSelect={setPicked} />
+          <p className="mt-3 text-sm text-ink-500">{COVERAGE_READINESS_NOTE}</p>
         </Section>
         <p className="sr-only" role="status" aria-live="polite">{announce}</p>
       </AppMain>

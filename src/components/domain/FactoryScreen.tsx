@@ -9,7 +9,7 @@ import { CURRENT_MONTH, REPORTING_PERIOD } from "@/src/data/tenants";
 import { fmtScore } from "@/src/lib/format";
 import { FACTORY_TABS, parseFactoryTab } from "@/src/lib/factoryTabs";
 import { getSites } from "@/src/lib/selectors";
-import { AppMain, CertPill, EmptyState, OffTrackChip, PageHeader, PeriodPill, QuadrantPill, StatusPill, TierBadge, Tabs, tabIds } from "@/src/components/ui";
+import { AppMain, StatusBandField, EmptyState, OffTrackChip, PageHeader, PeriodPill, QuadrantPill, StatusPill, TierBadge, Tabs, tabIds } from "@/src/components/ui";
 import EvidenceTab from "./EvidenceTab";
 import ImpactTab from "./ImpactTab";
 import OverviewTab from "./OverviewTab";
@@ -58,7 +58,7 @@ export default function FactoryScreen({ factoryId }: { factoryId: string }) {
             <span className="inline-flex min-h-7 items-center whitespace-nowrap rounded-full bg-blue-600 px-3 text-sm font-semibold text-white">Rank {site.rank} of {sites.length}</span>
             <TierBadge tier={site.tier} />
             <QuadrantPill quadrant={site.quadrant} />
-            <CertPill band={site.pwi.certBand} />
+            <StatusBandField band={site.pwi.statusBand} inline />
             <StatusPill tone="neutral" shape="ring" label={`Confidence ${fmtScore(site.pwi.confidence)}`} />
             <PeriodPill period={REPORTING_PERIOD.status} label={REPORTING_PERIOD.label} />
             <PeriodPill period={CURRENT_MONTH.status} label={CURRENT_MONTH.label} />

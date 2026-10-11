@@ -1,4 +1,4 @@
-import type { CertBand, Quadrant, Tier, Band } from "./types";
+import type { StatusBand, Quadrant, Tier, Band } from "./types";
 
 // Expected values copied from PRODUCT.md. Tests compare the computed output against these.
 // If a test fails, fix the code, not these numbers (they are the spec). Report a suspected spec error instead.
@@ -6,12 +6,12 @@ import type { CertBand, Quadrant, Tier, Band } from "./types";
 /** PRODUCT 5.5 check values, in rank order. PWI and volumetric balance are percentages to one decimal. */
 export interface SiteCheck {
   rank: number; id: string; band: Band; R: number; I: number; quadrant: Quadrant; tier: Tier;
-  P1: number; P2: number; P3: number; pwi: number; volumetric: number; cert: CertBand;
+  P1: number; P2: number; P3: number; pwi: number; volumetric: number; cert: StatusBand;
 }
 
 const c = (
   rank: number, id: string, band: Band, R: number, I: number, quadrant: Quadrant, tier: Tier,
-  P1: number, P2: number, P3: number, pwi: number, volumetric: number, cert: CertBand,
+  P1: number, P2: number, P3: number, pwi: number, volumetric: number, cert: StatusBand,
 ): SiteCheck => ({ rank, id, band, R, I, quadrant, tier, P1, P2, P3, pwi, volumetric, cert });
 
 export const siteChecks: SiteCheck[] = [

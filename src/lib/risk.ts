@@ -1,6 +1,6 @@
 import { riskCatalogue, rawRiskValues } from "@/src/data/risks";
 import type { RiskScores } from "@/src/data/types";
-import type { FactoryId, PillarKey, RiskCategory, RiskCode, RiskStatus } from "./types";
+import type { FactoryId, PillarKey, RiskCategory, RiskCode, RiskGap, RiskStatus } from "./types";
 
 // PRODUCT 5.6: Basin Risk (Module 01). ucw, rri, cep and tex are never used in R.
 
@@ -15,16 +15,36 @@ export const PILLAR_LABELS: Record<PillarKey, string> = {
 
 export const DEFAULT_WEIGHTS: Weights = { scarcity: 0.3, groundwater: 0.2, drought: 0.2, flood: 0.15, community: 0.15 };
 
-/** Each pillar is the worst of its indicators on the 0 to 5 scale, divided by 5. */
-export function riskPillars(s: RiskScores): Pillars {
-  return {
-    scarcity: Math.max(s.bws, s.bwd, s.iav, s.sev) / 5,
-    groundwater: s.gtd / 5,
-    drought: s.drr / 5,
-    flood: Math.max(s.rfr, s.cfr) / 5,
-    community: Math.max(s.udw, s.usa) / 5,
-  };
+/** The indicators behind each pillar (PRODUCT 5.6). ucw, rri, cep and tex are never part of R. */
+export const PILLAR_INDICATORS: Record<PillarKey, readonly RiskCode[]> = {
+  scarcity: ["bws", "bwd", "iav", "sev"], groundwater: ["gtd"], drought: ["drr"], flood: ["rfr", "cfr"], community: ["udw", "usa"],
+};
+export const REQUIRED_INDICATORS = PILLAR_KEYS.reduce((n, k) => n + PILLAR_INDICATORS[k].length, 0);
+
+export type RiskGaps = Partial<Record<RiskCode, RiskGap>>;
+
+export interface RiskCoverage { available: number; required: number; share: number }
+export interface PillarResult { pillars: Pillars; missingPillars: PillarKey[]; coverage: RiskCoverage }
+
+/**
+ * V2 4.2 missing-data policy. A missing indicator drops out of its pillar and the pillar takes the max of the rest.
+ * A pillar with no indicator left drops out (value 0 here, listed in missingPillars) and the weights renormalise.
+ * Coverage is indicators available over indicators required.
+ */
+export function riskPillarsPolicy(s: RiskScores, gaps: RiskGaps = {}): PillarResult {
+  let available = 0;
+  const missingPillars: PillarKey[] = [];
+  const pillars = Object.fromEntries(PILLAR_KEYS.map((k) => {
+    const usable = PILLAR_INDICATORS[k].filter((c) => !gaps[c]);
+    available += usable.length;
+    if (usable.length === 0) { missingPillars.push(k); return [k, 0]; }
+    return [k, Math.max(...usable.map((c) => s[c])) / 5];
+  })) as Pillars;
+  return { pillars, missingPillars, coverage: { available, required: REQUIRED_INDICATORS, share: available / REQUIRED_INDICATORS } };
 }
+
+/** Each pillar is the worst of its available indicators on the 0 to 5 scale, divided by 5. */
+export const riskPillars = (s: RiskScores, gaps: RiskGaps = {}): Pillars => riskPillarsPolicy(s, gaps).pillars;
 
 /** Scale weights to sum to 1 (the live weights panel renormalises to 100%). */
 export function normaliseWeights(w: Weights): Weights {
@@ -33,9 +53,26 @@ export function normaliseWeights(w: Weights): Weights {
   return Object.fromEntries(PILLAR_KEYS.map((k) => [k, w[k] / total])) as Weights;
 }
 
-/** R = sum of weight x pillar. */
-export function riskR(p: Pillars, w: Weights = DEFAULT_WEIGHTS): number {
-  return PILLAR_KEYS.reduce((sum, k) => sum + w[k] * p[k], 0);
+/** R = sum of weight x pillar. Missing pillars drop out and the remaining weights renormalise (V2 4.2). */
+export function riskR(p: Pillars, w: Weights = DEFAULT_WEIGHTS, missing: readonly PillarKey[] = []): number {
+  if (missing.length === 0) return PILLAR_KEYS.reduce((sum, k) => sum + w[k] * p[k], 0);
+  const kept = Object.fromEntries(PILLAR_KEYS.map((k) => [k, missing.includes(k) ? 0 : w[k]])) as Weights;
+  if (PILLAR_KEYS.every((k) => kept[k] === 0)) return 0;
+  const n = normaliseWeights(kept);
+  return PILLAR_KEYS.reduce((sum, k) => sum + n[k] * p[k], 0);
+}
+
+/**
+ * The effect of renormalisation: R under the policy minus R if each missing pillar were scored at the mean of the
+ * available pillars. It can be positive or negative; it is never claimed to be neutral.
+ */
+export function renormalisationDelta(p: Pillars, w: Weights = DEFAULT_WEIGHTS, missing: readonly PillarKey[] = []): number {
+  if (missing.length === 0) return 0;
+  const present = PILLAR_KEYS.filter((k) => !missing.includes(k));
+  if (present.length === 0) return 0;
+  const mean = present.reduce((sum, k) => sum + p[k], 0) / present.length;
+  const imputed = Object.fromEntries(PILLAR_KEYS.map((k) => [k, missing.includes(k) ? mean : p[k]])) as Pillars;
+  return riskR(p, w, missing) - riskR(imputed, w);
 }
 
 /** 2050 rise in water stress, used as the last ranking tie-break. */
@@ -58,6 +95,8 @@ export const textileLabel = (score: number): "Extremely High" | null => (score >
 export interface RiskResult {
   code: RiskCode; name: string; shortName: string; category: RiskCategory;
   score: number; scorePct: number; status: RiskStatus;
+  /** V2 4.2: No data or Error. Such a card shows no score and is left out of R and the counts. */
+  gap: RiskGap | null;
   countryLevel: boolean;
   /** Shown separately and left out of the Present and Watch counts (coastal eutrophication). */
   excludedFromCounts: boolean;
@@ -69,12 +108,12 @@ export interface RiskResult {
 export const RISK_TOTAL = riskCatalogue.length;
 export const RISK_COUNTED = riskCatalogue.filter((c) => c.code !== "cep").length;
 
-export function evaluateRisks(factoryId: FactoryId, s: RiskScores): RiskResult[] {
+export function evaluateRisks(factoryId: FactoryId, s: RiskScores, gaps: RiskGaps = {}): RiskResult[] {
   return riskCatalogue.map((c) => {
     const score = s[c.code];
     return {
       code: c.code, name: c.name, shortName: c.shortName, category: c.category,
-      score, scorePct: (score / 5) * 100, status: riskStatus(c.code, score),
+      score, scorePct: (score / 5) * 100, gap: gaps[c.code] ?? null, status: gaps[c.code] ?? riskStatus(c.code, score),
       countryLevel: c.countryLevel, excludedFromCounts: c.code === "cep",
       compositeLabel: c.code === "tex" ? textileLabel(score) : null,
       rawValue: rawRiskValues[factoryId]?.[c.code] ?? null,

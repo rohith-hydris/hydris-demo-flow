@@ -6,7 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { fmtScore } from "@/src/lib/format";
-import { COUNTRY_LEVEL_NOTE, VINTAGE_NOTE, explainRisk } from "@/src/lib/riskCopy";
+import { COUNTRY_LEVEL_NOTE, VINTAGE_NOTE, coverageLine, explainRisk, hasMissingPillar, renormalisationLine } from "@/src/lib/riskCopy";
 import { DEFAULT_WEIGHTS, PILLAR_KEYS, PILLAR_LABELS, PRESENT_AT, RISK_COUNTED, WATCH_AT, type RiskResult } from "@/src/lib/risk";
 import type { Site } from "@/src/lib/selectors";
 import { traceRisk } from "@/src/lib/trace";
@@ -27,7 +27,7 @@ function RiskCard({ risk, site }: { risk: RiskResult; site: Site }) {
   const e = explainRisk(risk, site);
   const Icon = ICONS[risk.code];
   return (
-    <li className="card flex flex-col p-5">
+    <li className={`card flex flex-col p-5 ${risk.gap === "No data" ? "border-dashed border-[var(--neutral-fill)]" : risk.gap === "Error" ? "border-2 border-[var(--negative-fill)]" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-tile bg-blue-100 text-blue-600"><Icon className="size-5" aria-hidden="true" /></span>
@@ -36,12 +36,19 @@ function RiskCard({ risk, site }: { risk: RiskResult; site: Site }) {
         <RiskPill status={risk.status} />
       </div>
 
+
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {risk.countryLevel && <StatusPill tone="neutral" shape="ring" label="Country-level" />}
         {risk.excludedFromCounts && <StatusPill tone="neutral" shape="ring" label="Shown separately" />}
         {risk.compositeLabel && <StatusPill tone="negative" shape="triangle" label={risk.compositeLabel} />}
       </div>
 
+      {risk.gap ? (
+        <div className="mt-3">
+          <p className="font-display text-numlg text-ink-500" aria-label={risk.gap === "Error" ? "Could not be assessed" : "No data"}>{risk.gap === "Error" ? "Could not be assessed" : "No data"}</p>
+          <p className="mt-2 text-sm text-ink-500">{risk.gap === "Error" ? "The assessment returned an error. No score is shown and the indicator is left out." : "No reading is available. No score is shown and the indicator is left out."}</p>
+        </div>
+      ) : (
       <div className="mt-3">
         <p className="num font-display text-numlg text-ink-900">{fmtScore(risk.score)} <span className="text-base font-normal text-ink-500">/ 5</span></p>
         <ScoreBar
@@ -50,6 +57,7 @@ function RiskCard({ risk, site }: { risk: RiskResult; site: Site }) {
         />
         {risk.rawValue && <p className="mt-2 text-sm text-ink-500">Raw value <span className="num font-semibold text-ink-700">{risk.rawValue}</span></p>}
       </div>
+      )}
 
       <p className="mt-3 text-ink-700">{e.headline}</p>
 
@@ -83,13 +91,27 @@ export default function RiskTab({ site }: { site: Site }) {
             <h3>How the risk score R is built</h3>
             <InfoButton trace={traceRisk(site)} />
           </div>
-          <p className="mt-1 text-ink-500">Each pillar is its worst indicator on the 0 to 5 scale, divided by 5. R adds the pillars by weight.</p>
+          <p className="mt-1 text-ink-500">Each pillar is its worst available indicator on the 0 to 5 scale, divided by 5. R adds the pillars by weight.</p>
+          <p className="mt-3 flex flex-wrap items-center gap-2 font-semibold text-ink-900">
+            {coverageLine(site)}
+            {hasMissingPillar(site) && <StatusPill tone="caution" shape="triangle" label="Pillar missing" />}
+          </p>
+          <p className="mt-1 text-sm text-ink-500">{renormalisationLine(site)}</p>
           <ul className="mt-4 space-y-3">
             {PILLAR_KEYS.map((k) => (
               <li key={k} className="grid grid-cols-[110px_1fr_auto] items-center gap-3">
                 <span className="font-semibold text-ink-700">{PILLAR_LABELS[k]}</span>
-                <ScoreBar value={site.pillars[k]} label={`${PILLAR_LABELS[k]} pillar`} valueText={fmtScore(site.pillars[k])} />
-                <span className="num text-right text-ink-700">{fmtScore(site.pillars[k])} <span className="text-ink-500">× {fmtScore(DEFAULT_WEIGHTS[k])}</span></span>
+                {site.missingPillars.includes(k) ? (
+                  <>
+                    <span className="text-ink-500">No reading, dropped out</span>
+                    <span className="num text-right text-ink-500">—</span>
+                  </>
+                ) : (
+                  <>
+                    <ScoreBar value={site.pillars[k]} label={`${PILLAR_LABELS[k]} pillar`} valueText={fmtScore(site.pillars[k])} />
+                    <span className="num text-right text-ink-700">{fmtScore(site.pillars[k])} <span className="text-ink-500">× {fmtScore(DEFAULT_WEIGHTS[k])}</span></span>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -108,7 +130,7 @@ export default function RiskTab({ site }: { site: Site }) {
               </div>
             ))}
           </div>
-          <p className="mt-3 text-sm text-ink-500">Counted over {RISK_COUNTED} risks. Coastal eutrophication is shown separately and left out.</p>
+          <p className="mt-3 text-sm text-ink-500">Counted over {RISK_COUNTED} risks. Coastal eutrophication is shown separately and left out, and so is any indicator with No data or an Error.</p>
           <p className="mt-2 text-sm text-ink-500">{VINTAGE_NOTE}</p>
           <p className="mt-2 text-sm text-ink-500">{COUNTRY_LEVEL_NOTE}</p>
         </div>

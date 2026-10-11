@@ -1,6 +1,6 @@
 import { cellStateOverrides } from "@/src/data/cells";
 import type { CellScoreRecord, FactoryRecord, Measure, RemovalRecord, WorkedExample } from "@/src/data/types";
-import type { CellGrade, CellState, CertBand, Dimension, EvidenceGrade, FactoryId, Pillar } from "./types";
+import type { CellGrade, CellState, StatusBand, Dimension, EvidenceGrade, FactoryId, Pillar, TargetState } from "./types";
 
 // PRODUCT 6.1 to 6.7 and 5.9: the PWI Engine and Impact Module (Module 03). Pure functions, full precision.
 
@@ -22,10 +22,40 @@ export const REMOVAL_TARGET = 0.9;
 export const GRADE_FACTORS: Record<CellGrade, number> = { A: 0.95, B: 0.85, C: 0.7, D: 0, none: 0 };
 export const lowValue = (value: number, grade: CellGrade) => value * GRADE_FACTORS[grade];
 
-/** S = min(1, B / T). A zero target scores 1 and is flagged "target is zero". */
-export function cellScore(delivered: number, target: number): { score: number; targetIsZero: boolean } {
-  if (target === 0) return { score: 1, targetIsZero: true };
-  return { score: Math.min(1, delivered / target), targetIsZero: false };
+export interface CellScoreResult {
+  /** The computed cell score, or null when no score is computed (Missing, Not applicable). */
+  score: number | null;
+  /** What the cell contributes to its pillar: 0 for Missing; null when the cell is excluded from the pillar. */
+  rollup: number | null;
+  /** Excluded from the pillar, with the remaining dimension weights renormalised. */
+  excluded: boolean;
+  /** Shown with a flag. Anything other than an ordinary defined target is flagged. */
+  flagged: boolean;
+  /** Needs an evidence requirement (Demonstrated zero). */
+  needsEvidence: boolean;
+  /** Carries the "Proposed, under review" badge (Not applicable and Demonstrated zero; V2 4.1). */
+  proposed: boolean;
+  label: "Scored" | "Missing input" | "Not applicable" | "Zero demonstrated";
+}
+
+/**
+ * V2 4.1, replacing PRODUCT 6.1. S = min(1, B / T) for a target above zero. A target of zero never scores 1.0 on its own:
+ * - Missing (the default for T = 0): no score, rolls up as 0, flagged ("no baseline, no benefit").
+ * - Not applicable: no score, excluded from the pillar, flagged.
+ * - Demonstrated zero: 1.0 with an evidence requirement, flagged.
+ * Roll-up treatments are a demo default; the decision is pending (V2 P08 C01).
+ */
+export function cellScore(delivered: number, target: number, targetState: TargetState = "Defined"): CellScoreResult {
+  if (target > 0) {
+    return { score: Math.min(1, delivered / target), rollup: Math.min(1, delivered / target), excluded: false, flagged: false, needsEvidence: false, proposed: false, label: "Scored" };
+  }
+  if (targetState === "Not applicable") {
+    return { score: null, rollup: null, excluded: true, flagged: true, needsEvidence: false, proposed: true, label: "Not applicable" };
+  }
+  if (targetState === "Demonstrated zero") {
+    return { score: 1, rollup: 1, excluded: false, flagged: true, needsEvidence: true, proposed: true, label: "Zero demonstrated" };
+  }
+  return { score: null, rollup: 0, excluded: false, flagged: true, needsEvidence: false, proposed: false, label: "Missing input" };
 }
 
 /** S(Q,1) = mean over TSS, TN and TP of min(1, removal / 0.90). Averaged by score so TSS cannot hide poor nitrogen removal. */
@@ -34,8 +64,15 @@ export function p1Quality(removalPct: { tss: number; tn: number; tp: number }): 
   return parts.reduce((a, b) => a + b, 0) / 3;
 }
 
-export const pillarScore = (availability: number, accessibility: number, quality: number) =>
-  DIMENSION_WEIGHTS.Availability * availability + DIMENSION_WEIGHTS.Accessibility * accessibility + DIMENSION_WEIGHTS.Quality * quality;
+/** P = 0.40 A + 0.30 W + 0.30 Q. A null dimension (Not applicable) drops out and the other weights renormalise. */
+export function pillarScore(availability: number | null, accessibility: number | null, quality: number | null): number {
+  const parts: [number, number | null][] = [
+    [DIMENSION_WEIGHTS.Availability, availability], [DIMENSION_WEIGHTS.Accessibility, accessibility], [DIMENSION_WEIGHTS.Quality, quality],
+  ];
+  const kept = parts.filter((p): p is [number, number] => p[1] !== null);
+  const weight = kept.reduce((sum, [w]) => sum + w, 0);
+  return weight === 0 ? 0 : kept.reduce((sum, [w, v]) => sum + w * v, 0) / weight;
+}
 
 /** Site PWI as a 0 to 1 value; display as a percentage. */
 export const sitePwi = (p1: number, p2: number, p3: number) => (p1 + p2 + p3) / 3;
@@ -48,7 +85,7 @@ export const replenishmentNeeded = (withdrawalM3: number, basinDischargeM3: numb
   share * (withdrawalM3 - basinDischargeM3);
 
 /** Checked in this order (PRODUCT 6.5). */
-export function certificationBand(pwi: number, confidence: number): CertBand {
+export function internalStatusBand(pwi: number, confidence: number): StatusBand {
   if (confidence < 0.5) return "Low confidence";
   if (pwi >= 1.0 && confidence >= 0.75) return "Self-certified";
   if (pwi >= 0.8 && confidence >= 0.75) return "Conditional";
@@ -105,6 +142,8 @@ export interface PwiCell {
   /** Low value of the score after the evidence grade rule. */
   low: number;
   state: CellState; stateNote: string | null;
+  /** V2 4.1: every cell carries a target state. Demo cells all have a defined target above zero. */
+  targetState: TargetState;
   grade: CellGrade;
   target: Measure | null; delivered: Measure | null;
   breakdown: { label: string; value: number; unit: "m3" | "people" | "kg" }[];
@@ -119,7 +158,7 @@ export interface FactoryPwi {
   pillarsLow: Record<Pillar, number>;
   sitePwi: number; sitePwiLow: number;
   volumetricBalance: number;
-  confidence: number; certBand: CertBand;
+  confidence: number; statusBand: StatusBand;
   evidenceGrade: EvidenceGrade;
   /** Only the F12 worked example carries the Guide-compatible comparison (PRODUCT 6.6). */
   guide: { p1Quality: number; p1: number; sitePwi: number } | null;
@@ -168,7 +207,7 @@ export function buildFactoryPwi(
       const state = w ? w.state : derived.state;
       const grade: CellGrade = w ? w.grade : score === 0 ? "none" : factory.evidenceGrade;
       cells.push({
-        pillar, dimension, score, low: lowValue(score, grade), state,
+        pillar, dimension, score, low: lowValue(score, grade), state, targetState: "Defined",
         stateNote: w ? (w.stateNote ?? null) : derived.note,
         grade, target, delivered, breakdown: w?.breakdown ?? [],
         gap: gapText(pillar, dimension, state, score),
@@ -194,7 +233,7 @@ export function buildFactoryPwi(
     factoryId: factory.id, cells, pillars, pillarsLow, sitePwi: pwi,
     sitePwiLow: sitePwi(pillarsLow.P1, pillarsLow.P2, pillarsLow.P3),
     volumetricBalance: volumetricBalance(get("P1", "Availability", "score"), get("P2", "Availability", "score"), get("P3", "Availability", "score")),
-    confidence: factory.confidence, certBand: certificationBand(pwi, factory.confidence),
+    confidence: factory.confidence, statusBand: internalStatusBand(pwi, factory.confidence),
     evidenceGrade: factory.evidenceGrade, guide,
   };
 }

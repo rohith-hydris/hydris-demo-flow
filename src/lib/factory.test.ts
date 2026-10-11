@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { projects } from "@/src/data/projects";
 import { fmtCellScore, fmtPct1, fmtScore3 } from "./format";
-import { GUIDE_CORRECTIONS, guideDetail, ledgerFor, METHOD_VERSION, priorMonthSitePwi, waterBalance } from "./impact";
+import { GUIDE_CAPTION, guideDetail, ledgerFor, METHOD_VERSION, priorMonthSitePwi, waterBalance } from "./impact";
 import { explainRisk } from "./riskCopy";
 import { fmtClaim, fmtMeasure } from "./measure";
 import { whyThisRank } from "./explain";
@@ -42,7 +42,7 @@ describe("F12 impact grid matches PRODUCT 5.8 exactly", () => {
     expect([f12.pwi.pillars.P1, f12.pwi.pillars.P2, f12.pwi.pillars.P3].map(fmtScore3)).toEqual(["0.954", "0.758", "0.382"]);
     expect(fmtPct1(f12.pwi.sitePwi)).toBe("69.8%");
     expect(fmtPct1(f12.pwi.volumetricBalance)).toBe("73.6%");
-    expect(f12.pwi.certBand).toBe("In progress");
+    expect(f12.pwi.statusBand).toBe("In progress");
     expect(f12.pwi.confidence).toBe(0.78);
   });
 
@@ -51,7 +51,8 @@ describe("F12 impact grid matches PRODUCT 5.8 exactly", () => {
     expect(fmtScore3(f12.pwi.guide!.p1)).toBe("0.982");
     expect(fmtPct1(f12.pwi.sitePwi)).toBe("69.8%");
     expect(METHOD_VERSION).toBe("PWI-M 1.0");
-    expect(GUIDE_CORRECTIONS).toBe(20);
+    expect(GUIDE_CAPTION).toBe("Shows the effect of the proposed PWI-M 1.0 corrections. Reconciliation of the 20 source issues is pending.");
+    expect(GUIDE_CAPTION).not.toMatch(/corrects 20|resolved/i);
   });
 
   it("Guide detail: 63,450 of 70,500 kg removed is 90.0%, hiding TN removal of 75%", () => {

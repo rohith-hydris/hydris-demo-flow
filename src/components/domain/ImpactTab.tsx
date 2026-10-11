@@ -3,13 +3,17 @@
 import { useState } from "react";
 import { additionalityGate, projectBenefit } from "@/src/lib/claims";
 import { fmtInt, fmtPct1, fmtScore, fmtScore3 } from "@/src/lib/format";
-import { GUIDE_CORRECTIONS, METHOD_VERSION, guideDetail, ledgerFor, priorMonthSitePwi, sitePwiChange, waterBalance } from "@/src/lib/impact";
+import { GUIDE_CAPTION, METHOD_VERSION, guideDetail, ledgerFor, priorMonthSitePwi, sitePwiChange } from "@/src/lib/impact";
 import { fmtClaim } from "@/src/lib/measure";
 import type { Site } from "@/src/lib/selectors";
+import { CORRELATION_NOTE, SELF_CERTIFIED_NOTE, STATUS_BAND_LABEL, UNCERTAINTY_STATUS, uncertaintyRange } from "@/src/lib/statusCopy";
 import { cellLabel, traceConfidence, traceSitePwi, traceVolumetric } from "@/src/lib/trace";
-import { CertPill, EmptyState, Segmented, StatusPill } from "@/src/components/ui";
+import { StatusBandField, EmptyState, ProposedBadge, Segmented, StatusPill } from "@/src/components/ui";
+import AffectedOutputsPanel from "./AffectedOutputsPanel";
 import LedgerTimeline from "./LedgerTimeline";
 import PwiGrid from "./PwiGrid";
+import QualityAccountingPanel from "./QualityAccountingPanel";
+import WaterBalanceCard from "./WaterBalanceCard";
 import { InfoButton } from "./Trace";
 
 type Method = "pwi-m" | "guide";
@@ -33,11 +37,13 @@ export default function ImpactTab({ site }: { site: Site }) {
   const guideOn = method === "guide" && guide !== null;
   const shown = guideOn ? guide.sitePwi : pwi.sitePwi;
 
-  const wb = waterBalance(site.id);
   const ledger = ledgerFor(site.id);
   const prior = priorMonthSitePwi(site.id);
   const gate = additionalityGate(site.id);
+  const range = uncertaintyRange(pwi.sitePwi, site.evidenceGrade);
   const gaps = pwi.cells.filter((c) => c.gap !== null);
+  const compliance = gate.excluded.filter((e) => e.reason === "Compliance only");
+  const others = gate.excluded.filter((e) => e.reason !== "Compliance only");
 
   return (
     <div className="space-y-5">
@@ -59,7 +65,7 @@ export default function ImpactTab({ site }: { site: Site }) {
           </div>
           <p className="kpi num mt-2 font-display text-kpi text-ink-900" aria-live="polite">{fmtPct1(shown)}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <CertPill band={pwi.certBand} />
+            <StatusBandField band={pwi.statusBand} />
             <span className="flex items-center gap-1 text-ink-700">Confidence {fmtScore(pwi.confidence)} <InfoButton trace={traceConfidence(site)} /></span>
           </div>
           {!guideOn && (
@@ -82,7 +88,7 @@ export default function ImpactTab({ site }: { site: Site }) {
                 {METHOD_VERSION} <span className="num font-semibold">{fmtPct1(pwi.sitePwi)}</span> · Guide-compatible <span className="num font-semibold">{fmtPct1(guide.sitePwi)}</span>
               </p>
               <p className="mt-1 text-sm text-ink-500">
-                {METHOD_VERSION} corrects {GUIDE_CORRECTIONS} issues found in the source formulas; the Guide-compatible figure is shown for comparison.
+                {GUIDE_CAPTION}
               </p>
               {guideOn && detail && (
                 <p className="mt-2 rounded-tile bg-blue-50 p-3 text-sm text-ink-700">
@@ -121,54 +127,40 @@ export default function ImpactTab({ site }: { site: Site }) {
           )}
         </div>
 
-        <div className="card p-6 lg:col-span-5">
-          <h3>Water balance</h3>
-          {wb ? (
-            <>
-              <dl className="mt-4 space-y-2">
-                <div className="flex justify-between gap-3"><dt className="text-ink-700">Freshwater withdrawal</dt><dd className="num font-semibold text-ink-900">{fmtInt(wb.withdrawalM3)} m{"³"}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-ink-700">Compliant same-basin discharge</dt><dd className="num font-semibold text-ink-900">{fmtInt(wb.basinDischargeM3)} m{"³"}</dd></div>
-                <div className="flex justify-between gap-3 border-t border-line pt-2"><dt className="font-semibold text-ink-900">Replenishment needed (RN)</dt><dd className="num font-semibold text-ink-900">{fmtInt(wb.replenishmentNeededM3)} m{"³"}</dd></div>
-              </dl>
-              <p className="mt-2 text-sm text-ink-500">RN is the water the site must give back.</p>
-              <p className="mt-4 text-sm font-semibold text-ink-700">Withdrawal by source</p>
-              <ul className="mt-1 space-y-1 text-sm text-ink-700">
-                {wb.bySource.map((s) => <li key={s.label} className="flex justify-between gap-3"><span>{s.label}</span><span className="num">{fmtInt(s.m3)} m{"³"}</span></li>)}
-              </ul>
-            </>
-          ) : (
-            <>
-              <p className="num mt-4 font-display text-numlg text-ink-900">{fmtInt(site.replenishmentNeededM3)} m{"³"}</p>
-              <p className="text-ink-700">Replenishment needed (RN): the water the site must give back.</p>
-              <p className="mt-2 text-sm text-ink-500">Freshwater withdrawal and discharge are not part of the demo data for this site.</p>
-            </>
-          )}
-        </div>
+        <div className="card p-6 lg:col-span-5"><WaterBalanceCard site={site} /></div>
       </div>
 
+      {site.id === "F12" && <QualityAccountingPanel site={site} />}
+
       <div className="card p-6">
-        <h3>Additionality Gate</h3>
-        <p className="mt-1 text-ink-500">Only additional benefits count. Anything excluded shows its reason.</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3>Additionality Gate</h3>
+          <ProposedBadge label="Exclusion rule: under review" />
+        </div>
+        <p className="mt-1 text-ink-500">Only additional benefits count. Anything excluded shows its reason. Compliance performance is tracked separately from additional benefit.</p>
         {gate.counted.length + gate.excluded.length === 0 ? (
           <p className="mt-4 text-ink-700">No sub-basin or basin projects are registered, so nothing is counted yet.</p>
         ) : (
-          <div className="mt-4 grid gap-6 md:grid-cols-2">
+          <div className="mt-4 grid gap-6 md:grid-cols-3">
             <div>
               <h4>Counted</h4>
               <ul className="mt-2 divide-y divide-line">
                 {gate.counted.map((p) => (
-                  <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-                    <span className="text-ink-700">{p.name}</span>
-                    <span className="num font-semibold text-ink-900">{fmtClaim(projectBenefit(p).attributed)}</span>
+                  <li key={p.id} className="py-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-ink-700">{p.name}</span>
+                      <span className="num font-semibold text-ink-900">{fmtClaim(projectBenefit(p).attributed)}</span>
+                    </div>
+                    {/overdue/i.test(p.note) && <p className="text-sm text-ink-500">Monitoring-expiry rule (90 days) under review.</p>}
                   </li>
                 ))}
                 {gate.counted.length === 0 && <li className="py-2.5 text-ink-500">Nothing counted.</li>}
               </ul>
             </div>
             <div>
-              <h4>Excluded</h4>
+              <h4>Excluded from benefit</h4>
               <ul className="mt-2 divide-y divide-line">
-                {gate.excluded.map((e) => (
+                {others.map((e) => (
                   <li key={e.project.id} className="py-2.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-ink-700">{e.project.name}</span>
@@ -177,23 +169,46 @@ export default function ImpactTab({ site }: { site: Site }) {
                     <p className="text-sm text-ink-500">{fmtClaim(e.project.claim)} claimed. {e.project.note}</p>
                   </li>
                 ))}
-                {gate.excluded.length === 0 && <li className="py-2.5 text-ink-500">Nothing excluded.</li>}
+                {others.length === 0 && <li className="py-2.5 text-ink-500">Nothing excluded.</li>}
+              </ul>
+            </div>
+            <div className="rounded-tile border border-dashed border-[var(--neutral-line)] bg-[var(--neutral-bg)] p-4">
+              <h4>Compliance performance</h4>
+              <p className="mt-1 text-sm text-ink-500">Compliance performance, tracked separately from additional benefit.</p>
+              <ul className="mt-2 divide-y divide-line">
+                {compliance.map((e) => (
+                  <li key={e.project.id} className="py-2.5">
+                    <p className="text-ink-700">{e.project.name}</p>
+                    <p className="text-sm text-ink-500">{e.project.id} · {fmtClaim(e.project.claim)} · {e.project.note}</p>
+                  </li>
+                ))}
+                {compliance.length === 0 && <li className="py-2.5 text-sm text-ink-500">No compliance-only projects.</li>}
               </ul>
             </div>
           </div>
         )}
       </div>
 
+      {site.id === "F12" && <AffectedOutputsPanel site={site} />}
+
       <div className="grid gap-5 lg:grid-cols-12">
         <div className="card p-6 lg:col-span-5">
-          <h3>Confidence and certification</h3>
+          <h3>Confidence and {STATUS_BAND_LABEL.toLowerCase()}</h3>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className="num font-display text-numlg text-ink-900">{fmtScore(pwi.confidence)}</span>
-            <CertPill band={pwi.certBand} />
+            <StatusBandField band={pwi.statusBand} />
           </div>
           <p className="mt-3 font-semibold text-ink-700">Evidence grade rule</p>
           <GradeRule />
-          <p className="mt-3 rounded-tile bg-blue-50 p-3 text-ink-700">Self-certified is internal. Net Positive claims need external assurance.</p>
+          <div className="mt-3 rounded-tile border border-line p-3">
+            <p className="font-semibold text-ink-700">Uncertainty range <span className="font-normal text-ink-500">(separate from the grade)</span></p>
+            <p className="mt-1 text-ink-700">
+              Grade <span className="font-semibold">{site.evidenceGrade}</span> · Site PWI between{" "}
+              <span className="num font-semibold">{fmtPct1(range.low)}</span> and <span className="num font-semibold">{fmtPct1(range.high)}</span>
+            </p>
+            <p className="mt-1 text-sm text-ink-500">{UNCERTAINTY_STATUS}. {CORRELATION_NOTE}.</p>
+          </div>
+          <p className="mt-3 rounded-tile bg-blue-50 p-3 text-ink-700">{SELF_CERTIFIED_NOTE}</p>
         </div>
 
         <div className="card p-6 lg:col-span-7">

@@ -1,4 +1,5 @@
 export * from "./StatusPill";
+export * from "./ProposedBadge";
 export * from "./Bars";
 export * from "./Layout";
 export * from "./Controls";

@@ -14,10 +14,10 @@ describe("roles", () => {
     expect(tenantFor("supplier")).toMatchObject({ name: "Coromandel Denim Mills", roleLabel: "Supplier" });
   });
 
-  it("gives both roles the same four routes, with the first label adapted", () => {
+  it("gives both roles the same five routes, with the first label adapted", () => {
     const brand = navItemsFor("brand");
     const supplier = navItemsFor("supplier");
-    expect(brand.map((i) => i.href)).toEqual(["/portfolio", "/ranking", "/claims", "/copilot"]);
+    expect(brand.map((i) => i.href)).toEqual(["/portfolio", "/ranking", "/impact", "/claims", "/copilot"]);
     expect(supplier.map((i) => i.href)).toEqual(brand.map((i) => i.href));
     expect(brand[0].label).toBe("Portfolio");
     expect(supplier[0].label).toBe("My factories");

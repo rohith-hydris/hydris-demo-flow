@@ -6,6 +6,7 @@ import { fmtClaim, fmtMeasure, measureNote } from "./measure";
 import { GRADE_FACTORS, PILLAR_NAMES, REMOVAL_TARGET, type PwiCell } from "./pwi";
 import { DEFAULT_WEIGHTS, PILLAR_KEYS, PILLAR_LABELS } from "./risk";
 import type { Site } from "./selectors";
+import { CORRELATION_NOTE, INTERNAL_STATUS_NOTE, STATUS_BAND_LABEL, UNCERTAINTY_STATUS, uncertaintyRange } from "./statusCopy";
 import type { CellGrade, Pillar } from "./types";
 
 // Content for the "Where this number comes from" drawer (PRODUCT 1, DESIGN 4.12): value, formula, inputs with
@@ -124,7 +125,7 @@ export function traceConfidence(site: Site): Trace {
     title: "Site confidence",
     value: fmtScore(site.pwi.confidence),
     formula: [
-      "Certification band, checked in order:",
+      "Internal status band, checked in order:",
       "Under 0.50: Low confidence",
       "PWI of 1.00 or more and confidence of 0.75 or more: Self-certified (internal only)",
       "PWI of 0.80 or more and confidence of 0.75 or more: Conditional",
@@ -133,7 +134,10 @@ export function traceConfidence(site: Site): Trace {
     ],
     inputs: [
       { label: "Site PWI", value: fmtPct1(site.pwi.sitePwi), cite: MODULE_IMPACT },
-      { label: "Certification band", value: site.pwi.certBand },
+      { label: STATUS_BAND_LABEL, value: `${site.pwi.statusBand}. ${INTERNAL_STATUS_NOTE}` },
+      { label: "Evidence grade", value: site.evidenceGrade },
+      { label: "Uncertainty range", value: `${fmtPct1(uncertaintyRange(site.pwi.sitePwi, site.evidenceGrade).low)} to ${fmtPct1(uncertaintyRange(site.pwi.sitePwi, site.evidenceGrade).high)} (${UNCERTAINTY_STATUS})` },
+      { label: "Correlations", value: CORRELATION_NOTE },
     ],
     method: PWI_METHOD, grade: gradeOf(site.evidenceGrade),
     note: "Net Positive claims need external assurance.",

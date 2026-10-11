@@ -7,7 +7,7 @@ export type Band = 1 | 2 | 3;
 export type Tier = 1 | 2 | 3;
 export type Quadrant = "Act now" | "Build resilience" | "Reduce footprint" | "Monitor" | "Impact pending";
 
-export type RiskStatus = "Present" | "Watch" | "Not present";
+export type RiskStatus = "Present" | "Watch" | "Not present" | "No data" | "Error";
 export type RiskCode =
   | "bws" | "bwd" | "iav" | "sev" | "gtd" | "drr" | "rfr" | "cfr" | "udw" | "usa" | "ucw" | "rri" | "cep" | "tex";
 export type RiskCategory = "Physical quantity" | "Physical quality" | "Downstream" | "Regulatory and reputational" | "Composite";
@@ -18,7 +18,7 @@ export type Dimension = "Availability" | "Accessibility" | "Quality";
 export type EvidenceGrade = "A" | "B" | "C" | "D";
 export type CellGrade = EvidenceGrade | "none";
 export type CellState = "Scored" | "Partially scored" | "Missing input" | "Blocked" | "Not additional" | "Low confidence";
-export type CertBand = "Low confidence" | "Self-certified" | "Conditional" | "In progress" | "Not achieved";
+export type StatusBand = "Low confidence" | "Self-certified" | "Conditional" | "In progress" | "Not achieved";
 
 export type Health = "Healthy" | "Watch" | "Critical";
 export type ZdhcTier = "Aspirational" | "Progressive" | "Foundational" | "Not conformant";
@@ -31,3 +31,23 @@ export type ProjectStatus = "Validated" | "Pending validation" | "Flagged" | "No
 export type ReadinessState = "Ready" | "Missing" | "Failed check" | "Expired / out of period" | "Low confidence";
 export type InspectionStatus = "Needs review" | "Validated";
 export type CheckResult = "Pass" | "Warn" | "Fail";
+
+// ---- V2 addendum vocabularies -----------------------------------------------------------------------------------------
+/** V2 Section 2: five independent review states. The old single status is a summary computed from these. */
+export type EvidenceAcceptance = "Pending" | "Accepted" | "Accepted with warning" | "Rejected";
+export type CalculationValidity = "Valid" | "Needs recalculation" | "Blocked";
+export type BenefitState = "Forecast" | "Measured" | "Validated" | "Not validated";
+export type ClaimEligibility = "Eligible" | "Under review" | "Not eligible" | "Allocation conflict";
+export type ReportRelease = "Not included" | "Draft" | "Released (snapshot)";
+export interface ReviewStates {
+  evidenceAcceptance: EvidenceAcceptance; calculationValidity: CalculationValidity;
+  benefitState: BenefitState; claimEligibility: ClaimEligibility; reportRelease: ReportRelease;
+}
+
+/** V2 4.1. "Defined" is an ordinary target above zero; the other three describe a target of zero. */
+export type TargetState = "Defined" | "Missing" | "Not applicable" | "Demonstrated zero";
+/** V2 4.2: a risk indicator with no usable reading. */
+export type RiskGap = "No data" | "Error";
+
+export type CheckOutcome = "Pass" | "Fail" | "Unknown";
+export type ParticipantRole = "Host" | "Implementing partner" | "Contributor";

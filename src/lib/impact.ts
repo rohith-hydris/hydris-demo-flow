@@ -8,8 +8,8 @@ import type { FactoryId } from "./types";
 // Extra Impact tab inputs that exist only for the F12 worked example (PRODUCT 5.8).
 
 export const METHOD_VERSION = f12Example.methodVersion; // "PWI-M 1.0"
-/** PRODUCT 6.6 caption: the number of formula issues PWI-M 1.0 corrects. */
-export const GUIDE_CORRECTIONS = 20;
+/** V2 4.4: the source issues are proposed corrections, with reconciliation pending. See GUIDE_CAPTION in statusCopy.ts. */
+export { GUIDE_CAPTION } from "./statusCopy";
 
 export interface WaterBalance {
   withdrawalM3: number; basinDischargeM3: number; attributableShare: number; replenishmentNeededM3: number;

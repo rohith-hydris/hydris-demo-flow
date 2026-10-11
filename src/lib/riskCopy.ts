@@ -1,5 +1,5 @@
 import { fmtScore } from "./format";
-import { PRESENT_AT, WATCH_AT, type RiskResult } from "./risk";
+import { PILLAR_LABELS, PRESENT_AT, WATCH_AT, type RiskResult } from "./risk";
 import type { Site } from "./selectors";
 import type { RiskCode } from "./types";
 
@@ -43,6 +43,20 @@ export interface RiskExplanation {
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 
 export function explainRisk(r: RiskResult, site: Site): RiskExplanation {
+  const vintage = AQUEDUCT_4.has(r.code) ? "Aqueduct 4.0" : "About 2014";
+  if (r.gap) {
+    const inR = !r.excludedFromCounts && r.code !== "ucw" && r.code !== "rri" && r.code !== "tex";
+    return {
+      headline: r.gap === "No data" ? "No data for this indicator at this site." : "Could not be assessed.",
+      meaning: MEANING[r.code],
+      reason: r.gap === "No data" ? "No reading is available, so no status is given." : "The assessment returned an error, so no status is given.",
+      threshold: "Not applicable without a reading.",
+      whatWouldChange: "A valid reading would give it a status.",
+      outlook: null,
+      caveats: [inR ? "Left out of its pillar: the pillar takes the highest of the indicators that remain. Data coverage is lower." : "Left out of R and the counts."],
+      vintage,
+    };
+  }
   const s = r.score;
   const score = fmtScore(s);
 
@@ -87,4 +101,28 @@ export function explainRisk(r: RiskResult, site: Site): RiskExplanation {
   if (r.rawValue) caveats.push(`Raw value: ${r.rawValue}.`);
 
   return { headline, meaning: MEANING[r.code], reason, threshold, whatWouldChange, outlook, caveats, vintage: AQUEDUCT_4.has(r.code) ? "Aqueduct 4.0" : "About 2014" };
+}
+
+// ---- V2 4.2: data coverage and the renormalisation effect ------------------------------------------------------------------
+
+/** "Data coverage 90%" with the counts behind it. */
+export const coverageLine = (site: Site) =>
+  `Data coverage ${Math.round(site.riskCoverage.share * 100)}% (${site.riskCoverage.available} of ${site.riskCoverage.required} risk indicators have a reading)`;
+
+export const hasMissingPillar = (site: Site) => site.missingPillars.length > 0;
+
+/**
+ * What the missing-data policy did to R. It never claims renormalisation is neutral: with a missing pillar it states the
+ * effect with its sign, and without one it says nothing needed renormalising.
+ */
+export function renormalisationLine(site: Site): string {
+  if (!hasMissingPillar(site)) {
+    return site.riskCoverage.available < site.riskCoverage.required
+      ? "Every pillar still has a reading, so the weights did not change. A missing indicator drops out and its pillar uses the highest of the rest."
+      : "Every indicator has a reading, so no indicator dropped out.";
+  }
+  const names = site.missingPillars.map((k) => PILLAR_LABELS[k].toLowerCase()).join(" and ");
+  const d = site.renormDelta;
+  const effect = Math.abs(d) < 0.005 ? "changed R by less than 0.01" : `${d > 0 ? "raised" : "lowered"} R by ${fmtScore(Math.abs(d))}`;
+  return `The ${names} pillar has no reading, so it dropped out and the other weights were renormalised. Against scoring it at the mean of the other pillars, this ${effect}. Renormalisation can raise or lower R.`;
 }

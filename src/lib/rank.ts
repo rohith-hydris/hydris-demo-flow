@@ -1,6 +1,6 @@
 import { seededRandom, RANK_RANGE_SEED } from "./rng";
 import { DEFAULT_WEIGHTS, PILLAR_KEYS, normaliseWeights, riskR, type Pillars, type Weights } from "./risk";
-import type { Band, FactoryId, Quadrant, Tier } from "./types";
+import type { Band, FactoryId, PillarKey, Quadrant, Tier } from "./types";
 
 // PRODUCT 6.8 (ranking) and 4.5 (rank range). Rank shows priority for action, never performance.
 
@@ -30,6 +30,8 @@ export function tierOf(rank: number, count: number): Tier {
 
 export interface RankInput {
   id: FactoryId; pillars: Pillars; footprintI: number | null; presentCount: number; bwsRise: number;
+  /** Pillars with no usable indicator: they drop out of R and the weights renormalise (V2 4.2). */
+  missingPillars?: PillarKey[];
 }
 export interface RankedSite {
   id: FactoryId; R: number; footprintI: number | null; band: Band; quadrant: Quadrant; rank: number; tier: Tier;
@@ -53,7 +55,7 @@ function compare(a: Scored, b: Scored): number {
 export function rankSites(inputs: RankInput[], weights: Weights = DEFAULT_WEIGHTS): RankedSite[] {
   const w = normaliseWeights(weights);
   const scored: Scored[] = inputs.map((i) => {
-    const R = riskR(i.pillars, w);
+    const R = riskR(i.pillars, w, i.missingPillars);
     return { ...i, R, band: bandOf(R) };
   });
   scored.sort(compare);

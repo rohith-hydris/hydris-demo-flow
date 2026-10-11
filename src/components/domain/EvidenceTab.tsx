@@ -6,6 +6,7 @@ import type { DocumentRecord, InspectionRecord } from "@/src/data/types";
 import { documentsForFactory, inspectionsFor, READINESS_STATES, readinessCounts, trustScore } from "@/src/lib/claims";
 import type { Site } from "@/src/lib/selectors";
 import { ReadinessPill, Shape, StatusPill, readinessMeta } from "@/src/components/ui";
+import AffectedOutputsPanel from "./AffectedOutputsPanel";
 import MockAction from "./MockAction";
 import TrustRing from "./TrustRing";
 
@@ -86,6 +87,8 @@ export default function EvidenceTab({ site, canValidate }: { site: Site; canVali
           <p className="mt-1 text-ink-500">{docs.length} documents for this site. A figure only counts when its document is ready.</p>
           <ul className="mt-4 divide-y divide-line">{docs.map((d) => <DocRow key={d.id} d={d} />)}</ul>
         </div>
+
+        <AffectedOutputsPanel site={site} />
 
         <div className="card p-6">
           <h3>Audit and compliance reports</h3>

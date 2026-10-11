@@ -155,8 +155,8 @@ describe("document readiness (PRODUCT 5.11)", () => {
 });
 
 describe("field inspections (PRODUCT 5.11, script V3)", () => {
-  it("trust scores are 85.7%, 100% and 66.7%", () => {
-    expect(inspections.map((i) => pct1(trustScore(i)))).toEqual([85.7, 100, 66.7]);
+  it("trust scores are 85.7%, 100%, 66.7% and (INS-0415) 100%", () => {
+    expect(inspections.map((i) => pct1(trustScore(i)))).toEqual([85.7, 100, 66.7, 100]);
   });
 
   it("INS-0412 has one Fail (step 9, VC-06) and one Warn (step 11, VC-21); 12 of 14 steps passed", () => {
@@ -166,6 +166,6 @@ describe("field inspections (PRODUCT 5.11, script V3)", () => {
   });
 
   it("statuses: INS-0408 Validated; INS-0399 Needs review", () => {
-    expect(inspections.map((i) => i.status)).toEqual(["Needs review", "Validated", "Needs review"]);
+    expect(inspections.map((i) => i.status)).toEqual(["Needs review", "Validated", "Needs review", "Validated"]);
   });
 });

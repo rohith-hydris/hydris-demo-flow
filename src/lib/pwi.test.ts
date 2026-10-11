@@ -4,7 +4,7 @@ import { f12Example } from "@/src/data/f12Example";
 import { factories } from "@/src/data/factories";
 import { pct1, round } from "./format";
 import {
-  buildFactoryPwi, cellScore, cellTargets, certificationBand, guideP1Quality, lowValue, p1Quality, pillarScore, replenishmentNeeded,
+  buildFactoryPwi, cellScore, cellTargets, internalStatusBand, guideP1Quality, lowValue, p1Quality, pillarScore, replenishmentNeeded,
   sitePwi, volumetricBalance,
 } from "./pwi";
 import { siteChecks } from "./specCheckValues";
@@ -22,8 +22,29 @@ describe("formulas (PRODUCT 6.1 to 6.5)", () => {
     expect(cellScore(0, 22000).score).toBe(0);
   });
 
-  it("a zero target scores 1 and is flagged", () => {
-    expect(cellScore(5, 0)).toEqual({ score: 1, targetIsZero: true });
+  it("a zero target never scores 1.0 on its own (V2 4.1)", () => {
+    const missing = cellScore(5, 0);
+    expect(missing).toMatchObject({ score: null, rollup: 0, excluded: false, flagged: true, label: "Missing input" });
+    expect(cellScore(5, 0, "Defined").rollup).not.toBe(1);
+  });
+
+  it("Not applicable drops out of the pillar and the other weights renormalise", () => {
+    const na = cellScore(0, 0, "Not applicable");
+    expect(na).toMatchObject({ score: null, rollup: null, excluded: true, flagged: true, proposed: true });
+    // A = 0.8, W = 0.6, Q excluded: (0.4 x 0.8 + 0.3 x 0.6) / 0.7
+    expect(pillarScore(0.8, 0.6, na.rollup)).toBeCloseTo((0.4 * 0.8 + 0.3 * 0.6) / 0.7, 12);
+  });
+
+  it("Demonstrated zero scores 1.0 with an evidence requirement and the proposed badge", () => {
+    expect(cellScore(0, 0, "Demonstrated zero")).toMatchObject({ score: 1, rollup: 1, flagged: true, needsEvidence: true, proposed: true });
+  });
+
+  it("Missing rolls up as 0 inside a pillar", () => {
+    expect(pillarScore(0.9, 0.8, cellScore(0, 0).rollup)).toBeCloseTo(0.4 * 0.9 + 0.3 * 0.8, 12);
+  });
+
+  it("every cell carries a defined target state", () => {
+    for (const c of buildFactoryPwi(factories[11], cellScores[11], removals[11], f12Example).cells) expect(c.targetState).toBe("Defined");
   });
 
   it("P1 Quality averages per-pollutant scores: F12 is 0.907, so TN cannot be hidden by TSS", () => {
@@ -44,13 +65,13 @@ describe("formulas (PRODUCT 6.1 to 6.5)", () => {
     expect(volumetricBalance(0, 1, 1)).toBeCloseTo(0.8, 12);
   });
 
-  it("certification band is checked in order", () => {
-    expect(certificationBand(0.95, 0.49)).toBe("Low confidence");
-    expect(certificationBand(1.0, 0.75)).toBe("Self-certified");
-    expect(certificationBand(0.8, 0.75)).toBe("Conditional");
-    expect(certificationBand(0.8, 0.74)).toBe("In progress");
-    expect(certificationBand(0.6, 0.5)).toBe("In progress");
-    expect(certificationBand(0.59, 0.9)).toBe("Not achieved");
+  it("internal status band is checked in order", () => {
+    expect(internalStatusBand(0.95, 0.49)).toBe("Low confidence");
+    expect(internalStatusBand(1.0, 0.75)).toBe("Self-certified");
+    expect(internalStatusBand(0.8, 0.75)).toBe("Conditional");
+    expect(internalStatusBand(0.8, 0.74)).toBe("In progress");
+    expect(internalStatusBand(0.6, 0.5)).toBe("In progress");
+    expect(internalStatusBand(0.59, 0.9)).toBe("Not achieved");
   });
 
   it("grade factors: B gives 21,250 from 25,000 and C gives 8,400 from 12,000; D scores zero", () => {
@@ -69,7 +90,7 @@ describe("check values for all 14 sites (PRODUCT 5.5)", () => {
     });
     it(`Site PWI ${c.pwi}%`, () => expect(pct1(p.sitePwi)).toBe(c.pwi));
     it(`volumetric balance ${c.volumetric}%`, () => expect(pct1(p.volumetricBalance)).toBe(c.volumetric));
-    it(`certification band ${c.cert}`, () => expect(p.certBand).toBe(c.cert));
+    it(`internal status band ${c.cert}`, () => expect(p.statusBand).toBe(c.cert));
   });
 });
 
@@ -79,7 +100,7 @@ describe("F12 worked example (PRODUCT 5.8, 6.6)", () => {
   it("Site PWI 69.8%, volumetric balance 73.6%, band In progress", () => {
     expect(pct1(p.sitePwi)).toBe(69.8);
     expect(pct1(p.volumetricBalance)).toBe(73.6);
-    expect(p.certBand).toBe("In progress");
+    expect(p.statusBand).toBe("In progress");
   });
 
   it("Guide-compatible figure is 70.7% (P1 Quality scored as 1.0 by the mass-sum rule)", () => {

@@ -4,14 +4,15 @@ import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
 import { RANK_RANGE_TITLE } from "@/src/lib/explain";
+import { FOOTPRINT_TOOLTIP } from "@/src/lib/statusCopy";
 import { fmtPct1, fmtScore } from "@/src/lib/format";
 import { PILLAR_LABELS } from "@/src/lib/risk";
 import type { RankRange } from "@/src/lib/rank";
 import type { Site } from "@/src/lib/selectors";
 import { BandPill, QuadrantPill, StatusPill, TierBadge } from "@/src/components/ui";
 
-// Column minimums add up to about 1,040px so the table fits a 1,280px page without scrolling sideways.
-const COLS = "grid grid-cols-[76px_minmax(150px,1.6fr)_88px_52px_56px_144px_76px_minmax(110px,1.2fr)_minmax(96px,0.9fr)_68px_32px] items-center gap-x-2";
+// Column minimums add up to about 1,200px so the table fits a 1,280px page without scrolling sideways.
+const COLS = "grid grid-cols-[76px_minmax(150px,1.6fr)_88px_52px_56px_144px_76px_minmax(110px,1.2fr)_minmax(96px,0.9fr)_68px_76px_76px_32px] items-center gap-x-2";
 
 const range = (r: RankRange) => (r.low === r.high ? `${r.low}` : `${r.low} to ${r.high}`);
 
@@ -45,18 +46,20 @@ export default function RankTable({ sites, ranges, deltas, selectedId, onSelect 
 
   return (
     <div className="card p-2 max-xl:overflow-x-auto">
-      <div role="table" aria-label="Sites ranked by priority for action" className="min-w-[1100px] xl:min-w-0">
+      <div role="table" aria-label="Sites ranked by priority for action" className="min-w-[1260px] xl:min-w-0">
         <div role="row" className={`${COLS} rounded-tile bg-blue-50 px-4 py-3 text-sm font-semibold text-ink-700 xl:sticky xl:top-24 xl:z-10`}>
           <span role="columnheader">Rank</span>
           <span role="columnheader">Site</span>
           <span role="columnheader">Band</span>
           <span role="columnheader" className="text-right">R</span>
-          <span role="columnheader" className="text-right">I</span>
+          <span role="columnheader" className="text-right" title={FOOTPRINT_TOOLTIP}>I</span>
           <span role="columnheader">Quadrant</span>
           <span role="columnheader">Tier</span>
           <span role="columnheader">Drivers</span>
           <span role="columnheader" title={RANK_RANGE_TITLE}>Rank range</span>
           <span role="columnheader" className="text-right">PWI</span>
+          <span role="columnheader" className="text-right" title="Share of risk indicators with a reading. Informational.">Coverage</span>
+          <span role="columnheader" className="text-right" title="Share of documents that are Ready. Informational: it never filters, sorts or re-ranks.">Readiness</span>
           <span role="columnheader" className="sr-only">Open</span>
         </div>
 
@@ -96,6 +99,8 @@ export default function RankTable({ sites, ranges, deltas, selectedId, onSelect 
                   {rg.unstable && <StatusPill tone="caution" shape="diamond" label="Rank unstable" />}
                 </span>
                 <span role="cell" className="num text-right">{fmtPct1(s.pwi.sitePwi)}</span>
+                <span role="cell" className="num text-right">{Math.round(s.riskCoverage.share * 100)}%</span>
+                <span role="cell" className="num text-right">{Math.round(s.readiness * 100)}%</span>
                 <span role="cell">
                   <Link href={`/factories/${s.id}`} onClick={(e) => e.stopPropagation()} aria-label={`Open ${s.name}`} className="grid size-9 place-items-center rounded-full text-ink-300 hover:bg-blue-100 hover:text-blue-600">
                     <ChevronRight className="size-5" aria-hidden="true" />

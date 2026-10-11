@@ -6,13 +6,14 @@ import { projects } from "@/src/data/projects";
 import { riskScores } from "@/src/data/risks";
 import { suppliers } from "@/src/data/suppliers";
 import type { FactoryRecord, OpsRecord, SupplierRecord } from "@/src/data/types";
-import { awaitingValidation } from "./claims";
+import { awaitingValidation, readinessShare } from "./claims";
 import { alertCounts, buildAlerts, healthBand, highestSeverity, isOffTrack, tierDirection, type Alert } from "./ops";
 import { buildFactoryPwi, type FactoryPwi } from "./pwi";
 import { rankRanges, rankSites, type RankInput, type RankRange } from "./rank";
 import { rollup, type Rollup } from "./rollup";
 import {
-  DEFAULT_WEIGHTS, bwsRise, evaluateRisks, riskCounts, riskPillars, topDrivers, type Pillars, type RiskCounts, type RiskResult, type Weights,
+  DEFAULT_WEIGHTS, bwsRise, evaluateRisks, renormalisationDelta, riskCounts, riskPillarsPolicy, topDrivers,
+  type Pillars, type RiskCoverage, type RiskCounts, type RiskResult, type Weights,
 } from "./risk";
 import { canSeeFactory, type Scope } from "./scope";
 import type { Band, FactoryId, Health, PillarKey, Quadrant, Severity, SupplierId, Tier, TierDirection, ZdhcTier } from "./types";
@@ -22,19 +23,23 @@ import type { Band, FactoryId, Health, PillarKey, Quadrant, Severity, SupplierId
 
 interface StaticSite {
   record: FactoryRecord; supplierName: string;
-  pillars: Pillars; risks: RiskResult[]; riskCounts: RiskCounts; bwsRise: number;
+  pillars: Pillars; missingPillars: PillarKey[]; coverage: RiskCoverage;
+  risks: RiskResult[]; riskCounts: RiskCounts; bwsRise: number;
   pwi: FactoryPwi; ops: OpsRecord; health: Health; tierDirection: TierDirection | null; offTrack: boolean;
 }
 
 function buildStatic(): StaticSite[] {
   return factories.map((record) => {
-    const scores = riskScores.find((r) => r.factoryId === record.id)!.scores;
+    const riskRecord = riskScores.find((r) => r.factoryId === record.id)!;
+    const scores = riskRecord.scores;
+    const gaps = riskRecord.gaps ?? {};
+    const policy = riskPillarsPolicy(scores, gaps);
     const opsRow = ops.find((o) => o.factoryId === record.id)!;
-    const risks = evaluateRisks(record.id, scores);
+    const risks = evaluateRisks(record.id, scores, gaps);
     return {
       record,
       supplierName: suppliers.find((s) => s.id === record.supplierId)!.name,
-      pillars: riskPillars(scores), risks, riskCounts: riskCounts(risks), bwsRise: bwsRise(scores),
+      pillars: policy.pillars, missingPillars: policy.missingPillars, coverage: policy.coverage, risks, riskCounts: riskCounts(risks), bwsRise: bwsRise(scores),
       pwi: buildFactoryPwi(
         record,
         cellScores.find((c) => c.factoryId === record.id)!,
@@ -57,6 +62,10 @@ export interface Site {
   footprintI: number | null; replenishmentNeededM3: number; headcount: number; householdSize: number;
   confidence: number; evidenceGrade: FactoryRecord["evidenceGrade"];
   pillars: Pillars; drivers: PillarKey[];
+  /** V2 4.2: share of risk indicators with a usable reading, the pillars that dropped out, and the effect on R. */
+  riskCoverage: RiskCoverage; missingPillars: PillarKey[]; renormDelta: number;
+  /** Share of documents that are Ready (V2 4.2). Informational only: never used to filter, sort or rank. */
+  readiness: number;
   risks: RiskResult[]; riskCounts: RiskCounts; bwsRise: number;
   /** Risk score R for the weights in use. */
   R: number; band: Band; quadrant: Quadrant;
@@ -73,6 +82,7 @@ export interface Site {
 
 const toRankInput = (s: StaticSite): RankInput => ({
   id: s.record.id, pillars: s.pillars, footprintI: s.record.footprintI, presentCount: s.riskCounts.present, bwsRise: s.bwsRise,
+  missingPillars: s.missingPillars,
 });
 
 /** Sites in scope, ranked among themselves, sorted by rank. */
@@ -88,7 +98,8 @@ export function getSites(scope: Scope, weights: Weights = DEFAULT_WEIGHTS): Site
       id: f.id, name: f.name, supplierId: f.supplierId, supplierName: s.supplierName, district: f.district, lat: f.lat, lon: f.lon,
       footprintI: f.footprintI, replenishmentNeededM3: f.replenishmentNeededM3, headcount: f.headcount, householdSize: f.householdSize,
       confidence: f.confidence, evidenceGrade: f.evidenceGrade,
-      pillars: s.pillars, drivers: topDrivers(s.pillars), risks: s.risks, riskCounts: s.riskCounts, bwsRise: s.bwsRise,
+      pillars: s.pillars, drivers: topDrivers(s.pillars), riskCoverage: s.coverage, missingPillars: s.missingPillars,
+      renormDelta: renormalisationDelta(s.pillars, weights, s.missingPillars), readiness: readinessShare(f.id), risks: s.risks, riskCounts: s.riskCounts, bwsRise: s.bwsRise,
       R: r.R, band: r.band, quadrant: r.quadrant, rank: r.rank, tier: r.tier, networkRank: n.rank, networkTier: n.tier,
       pwi: s.pwi,
       healthScore: s.ops.healthScore, health: s.health, zdhcTier: s.ops.zdhcTier,

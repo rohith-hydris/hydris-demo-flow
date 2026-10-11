@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Info, X } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Info, X } from "lucide-react";
+import { METHODOLOGY_PATH } from "@/src/lib/methodology";
 import type { Trace } from "@/src/lib/trace";
 import { CitationChip, StatusPill } from "@/src/components/ui";
 
@@ -47,6 +49,9 @@ export function TraceProvider({ children }: { children: ReactNode }) {
     setShown(false);
     window.setTimeout(() => { setTrace(null); opener.current?.focus(); }, 200);
   }, []);
+
+  // Following a link leaves this page, so drop the drawer without handing focus back to the opener.
+  const dismiss = useCallback(() => { setShown(false); setTrace(null); }, []);
 
   useEffect(() => {
     if (!trace) return;
@@ -119,6 +124,9 @@ export function TraceProvider({ children }: { children: ReactNode }) {
                 {trace.method.name}
                 {trace.method.version && <StatusPill tone="info" shape="square" label={trace.method.version} />}
               </p>
+              <Link href={METHODOLOGY_PATH} onClick={dismiss} className="mt-2 inline-flex min-h-11 items-center gap-2 font-semibold text-blue-600 hover:underline">
+                <BookOpen className="size-4" aria-hidden="true" /> See the methodology and open decisions
+              </Link>
             </section>
 
             {trace.grade && (

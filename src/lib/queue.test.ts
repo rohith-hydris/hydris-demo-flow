@@ -116,16 +116,16 @@ describe("audit and compliance reports", () => {
 });
 
 describe("field inspections", () => {
-  it("brand: three, with the ones that need review first", () => {
+  it("brand: four, with the ones that need review first", () => {
     const rows = inspectionRows(brand);
-    expect(rows.map((r) => r.inspection.id)).toEqual(["INS-0412", "INS-0399", "INS-0408"]);
-    expect(rows.map((r) => r.inspection.status)).toEqual(["Needs review", "Needs review", "Validated"]);
+    expect(rows.map((r) => r.inspection.id)).toEqual(["INS-0412", "INS-0399", "INS-0408", "INS-0415"]);
+    expect(rows.map((r) => r.inspection.status)).toEqual(["Needs review", "Needs review", "Validated", "Validated"]);
   });
-  it("supplier: only INS-0412", () => {
-    expect(inspectionRows(supplier).map((r) => r.inspection.id)).toEqual(["INS-0412"]);
+  it("supplier: INS-0412 and INS-0415 (a field upload)", () => {
+    expect(inspectionRows(supplier).map((r) => r.inspection.id)).toEqual(["INS-0412", "INS-0415"]);
   });
   it("filters by status and factory", () => {
-    expect(inspectionRows(brand, { status: "Validated" }).map((r) => r.inspection.id)).toEqual(["INS-0408"]);
+    expect(inspectionRows(brand, { status: "Validated" }).map((r) => r.inspection.id)).toEqual(["INS-0408", "INS-0415"]);
     expect(inspectionRows(brand, { factoryId: "F06" }).map((r) => r.inspection.id)).toEqual(["INS-0399"]);
   });
 });

@@ -1,5 +1,6 @@
 import { Lock } from "lucide-react";
-import type { Band, CellState, CertBand, CheckResult, Health, Period, ProjectStatus, Quadrant, ReadinessState, RiskStatus, Severity, Tier, ZdhcTier } from "@/src/lib/types";
+import { INTERNAL_STATUS_NOTE, STATUS_BAND_LABEL } from "@/src/lib/statusCopy";
+import type { Band, CellState, StatusBand, CheckResult, Health, Period, ProjectStatus, Quadrant, ReadinessState, RiskStatus, Severity, Tier, ZdhcTier } from "@/src/lib/types";
 
 export type Tone = "positive" | "caution" | "negative" | "high" | "neutral" | "info" | "internal";
 export type ShapeKind = "circle" | "diamond" | "triangle" | "square" | "ring" | "dash";
@@ -43,6 +44,8 @@ const riskMeta: Record<RiskStatus, Meta> = {
   Present: { tone: "negative", shape: "triangle" },
   Watch: { tone: "caution", shape: "diamond" },
   "Not present": { tone: "positive", shape: "circle" },
+  "No data": { tone: "neutral", shape: "ring" },
+  Error: { tone: "negative", shape: "square" },
 };
 export const RiskPill = ({ status }: { status: RiskStatus }) => <StatusPill {...riskMeta[status]} label={status} />;
 
@@ -82,14 +85,27 @@ export const SeverityPill = ({ severity }: { severity: Severity | null }) =>
   severity ? <StatusPill {...severityMeta[severity]} label={severity} /> : <span className="text-ink-500">None open</span>;
 
 
-export const certMeta: Record<CertBand, Meta> = {
+export const statusBandMeta: Record<StatusBand, Meta> = {
   "Low confidence": { tone: "neutral", shape: "ring" },
   "Self-certified": { tone: "internal", shape: "diamond" },
   Conditional: { tone: "info", shape: "ring" },
   "In progress": { tone: "caution", shape: "diamond" },
   "Not achieved": { tone: "negative", shape: "triangle" },
 };
-export const CertPill = ({ band }: { band: CertBand }) => <StatusPill {...certMeta[band]} label={band} />;
+export const StatusBandPill = ({ band }: { band: StatusBand }) => <StatusPill {...statusBandMeta[band]} label={band} />;
+
+/** The band with its field name and the non-certification line (V2 4.3). `inline` keeps it to one wrapping row for headers. */
+export function StatusBandField({ band, inline = false }: { band: StatusBand; inline?: boolean }) {
+  return (
+    <span className={inline ? "inline-flex flex-wrap items-center gap-x-2 gap-y-1" : "flex flex-col items-start gap-1"}>
+      <span className="inline-flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-ink-500">{STATUS_BAND_LABEL}</span>
+        <StatusBandPill band={band} />
+      </span>
+      <span className="text-sm text-ink-500">{INTERNAL_STATUS_NOTE}</span>
+    </span>
+  );
+}
 
 export const projectStatusMeta: Record<ProjectStatus, Meta> = {
   Validated: { tone: "positive", shape: "circle" },

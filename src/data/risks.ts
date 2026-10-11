@@ -7,6 +7,8 @@ const s = (
   cfr: number, udw: number, usa: number, ucw: number, rri: number, cep: number, tex: number, bws50: number,
 ): RiskScores => ({ bws, bwd, iav, sev, gtd, drr, rfr, cfr, udw, usa, ucw, rri, cep, tex, bws50 });
 
+// V2 4.2: F10 coastal flood has no data (R unchanged: the flood pillar still has riverine flood). F11 coastal eutrophication
+// could not be assessed (it is outside R and the counts). Scores are kept for the record but not used where a gap is set.
 export const riskScores: RiskScoreRecord[] = [
   { factoryId: "F01", scores: s(2.09, 2.6, 3.0, 3.9, 3.8, 4.05, 3.0, 0.0, 2.4, 3.4, 2.5, 3.6, 1.91, 4.05, 2.59) },
   { factoryId: "F02", scores: s(4.0, 3.6, 3.1, 3.4, 3.95, 3.75, 2.5, 0.0, 1.9, 2.9, 2.5, 3.6, 1.86, 3.85, 4.5) },
@@ -17,8 +19,8 @@ export const riskScores: RiskScoreRecord[] = [
   { factoryId: "F07", scores: s(2.0, 1.6, 1.1, 1.4, 2.45, 2.5, 1.5, 0.0, 1.9, 2.9, 2.5, 3.6, 1.48, 2.55, 2.5) },
   { factoryId: "F08", scores: s(1.5, 1.1, 0.6, 0.9, 1.5, 2.0, 1.25, 0.0, 0.75, 1.75, 2.5, 3.6, 1.28, 1.9, 2.0) },
   { factoryId: "F09", scores: s(3.0, 2.6, 2.1, 2.4, 3.5, 3.25, 2.25, 0.0, 2.75, 3.75, 2.5, 3.6, 1.75, 3.45, 3.5) },
-  { factoryId: "F10", scores: s(2.75, 2.35, 1.85, 2.15, 2.75, 2.75, 2.0, 0.0, 2.5, 3.5, 2.5, 3.6, 1.62, 3.05, 3.25) },
-  { factoryId: "F11", scores: s(1.75, 1.35, 0.85, 1.15, 1.7, 2.25, 1.5, 0.0, 1.4, 2.4, 2.5, 3.6, 1.37, 2.2, 2.25) },
+  { factoryId: "F10", scores: s(2.75, 2.35, 1.85, 2.15, 2.75, 2.75, 2.0, 0.0, 2.5, 3.5, 2.5, 3.6, 1.62, 3.05, 3.25), gaps: { cfr: "No data" } },
+  { factoryId: "F11", scores: s(1.75, 1.35, 0.85, 1.15, 1.7, 2.25, 1.5, 0.0, 1.4, 2.4, 2.5, 3.6, 1.37, 2.2, 2.25), gaps: { cep: "Error" } },
   { factoryId: "F12", scores: s(4.75, 4.35, 3.85, 4.15, 3.95, 4.0, 4.5, 3.6, 2.4, 3.4, 2.5, 3.6, 2.06, 4.5, 5.0) },
   { factoryId: "F13", scores: s(4.25, 3.85, 3.35, 3.65, 3.7, 3.75, 4.5, 0.0, 2.4, 3.4, 2.5, 3.6, 1.99, 4.25, 4.75) },
   { factoryId: "F14", scores: s(3.0, 2.6, 2.1, 2.4, 2.7, 3.25, 3.75, 2.85, 1.65, 2.65, 2.5, 3.6, 1.72, 3.35, 3.5) },

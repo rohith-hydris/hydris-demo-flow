@@ -5,7 +5,7 @@ import { BAND1_NOTE, LARGE_FOOTPRINT_NOTE, whyThisRank } from "@/src/lib/explain
 import { RISK_TOTAL, headlineRisks } from "@/src/lib/risk";
 import type { Site } from "@/src/lib/selectors";
 import { traceConfidence, traceFootprint, traceRisk, traceSitePwi, type Trace } from "@/src/lib/trace";
-import { BandPill, CertPill, HealthPill, SeverityPill, StatusPill, ZdhcPill } from "@/src/components/ui";
+import { BandPill, StatusBandField, HealthPill, SeverityPill, StatusPill, ZdhcPill } from "@/src/components/ui";
 import { MiniPwiGrid } from "./PwiGrid";
 import { InfoButton } from "./Trace";
 
@@ -51,7 +51,7 @@ export default function OverviewTab({ site, scopeSites, onTab }: { site: Site; s
           label="Footprint I" value={site.footprintI === null ? "Pending" : fmtScore(site.footprintI)} trace={traceFootprint(site)}
           context={LARGE_FOOTPRINT_NOTE}
         />
-        <StatTile label="Site PWI" value={fmtPct1(site.pwi.sitePwi)} trace={traceSitePwi(site)} extra={<CertPill band={site.pwi.certBand} />} context="Positive Water Impact" />
+        <StatTile label="Site PWI" value={fmtPct1(site.pwi.sitePwi)} trace={traceSitePwi(site)} extra={<StatusBandField band={site.pwi.statusBand} />} context="Positive Water Impact" />
         <StatTile label="Confidence" value={fmtScore(site.pwi.confidence)} trace={traceConfidence(site)} context={`Evidence grade ${site.evidenceGrade}`} />
       </ul>
 
