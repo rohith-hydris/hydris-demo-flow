@@ -41,13 +41,13 @@ export default function TopNav({ minimal = false }: { minimal?: boolean }) {
           </Link>
 
           {items.length > 0 && (
-            <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
+            <nav aria-label="Main" className="hidden items-center lg:flex">
               {items.map((item) => {
                 const active = isNavActive(item, pathname);
                 return (
                   <Link
                     key={item.href} href={item.href} aria-current={active ? "page" : undefined}
-                    className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 font-semibold ${active ? "bg-blue-100 text-blue-600" : "text-ink-700 hover:bg-blue-50"}`}
+                    className={`inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full px-3 font-semibold xl:px-3.5 ${active ? "bg-blue-100 text-blue-600" : "text-ink-700 hover:bg-blue-50"}`}
                   >
                     {item.sparkle && <Sparkles className="size-4" aria-hidden="true" />}
                     {item.label}
@@ -59,7 +59,7 @@ export default function TopNav({ minimal = false }: { minimal?: boolean }) {
 
           {tenant && !minimal && (
             <div className="flex items-center gap-3">
-              <span className="hidden max-w-48 truncate font-semibold text-ink-900 md:inline">{tenant.name}</span>
+              <span className="hidden max-w-40 truncate font-semibold text-ink-900 md:inline">{tenant.name}</span>
               <RoleMenu />
               <span className="hidden size-11 shrink-0 place-items-center rounded-full bg-blue-600 text-sm font-bold text-white sm:grid" aria-hidden="true">{tenant.initials}</span>
               <button

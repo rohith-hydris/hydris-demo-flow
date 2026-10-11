@@ -75,7 +75,7 @@ function Builder() {
       <div className="mt-5 flex flex-wrap items-end gap-3">
         <div>
           <label htmlFor={nameId} className="block text-sm font-semibold text-ink-500">Scenario name (optional)</label>
-          <input id={nameId} value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="For example, Wetland and WASH" className="min-h-11 w-72 max-w-full rounded-full border border-line bg-card px-4" />
+          <input id={nameId} value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Example: Wetland and WASH" className="min-h-11 w-80 max-w-full rounded-full border border-line bg-card px-4" />
         </div>
         <button type="button" className="btn btn-primary min-h-11 px-5" disabled={picked.length === 0} onClick={onSave}><Save className="size-4" aria-hidden="true" /> Save scenario</button>
         <span role="status" className="font-semibold text-blue-600">{note}</span>

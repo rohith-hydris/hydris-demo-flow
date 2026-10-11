@@ -11,8 +11,8 @@ import type { RankRange } from "@/src/lib/rank";
 import type { Site } from "@/src/lib/selectors";
 import { BandPill, QuadrantPill, StatusPill, TierBadge } from "@/src/components/ui";
 
-// Column minimums add up to about 1,200px so the table fits a 1,280px page without scrolling sideways.
-const COLS = "grid grid-cols-[76px_minmax(150px,1.6fr)_88px_52px_56px_144px_76px_minmax(110px,1.2fr)_minmax(96px,0.9fr)_68px_76px_76px_32px] items-center gap-x-2";
+// Column minimums add up to about 1,150px so the table fits a 1,280px page; narrower screens scroll inside the card.
+const COLS = "grid grid-cols-[64px_minmax(160px,1.8fr)_88px_44px_48px_152px_64px_minmax(100px,1.1fr)_minmax(80px,0.8fr)_64px_72px_76px_32px] items-center gap-x-1.5";
 
 const range = (r: RankRange) => (r.low === r.high ? `${r.low}` : `${r.low} to ${r.high}`);
 
@@ -45,9 +45,9 @@ export default function RankTable({ sites, ranges, deltas, selectedId, onSelect 
   }, [order]);
 
   return (
-    <div className="card p-2 max-xl:overflow-x-auto">
-      <div role="table" aria-label="Sites ranked by priority for action" className="min-w-[1260px] xl:min-w-0">
-        <div role="row" className={`${COLS} rounded-tile bg-blue-50 px-4 py-3 text-sm font-semibold text-ink-700 xl:sticky xl:top-24 xl:z-10`}>
+    <div className="card overflow-x-auto p-2">
+      <div role="table" aria-label="Sites ranked by priority for action" className="min-w-[1150px]">
+        <div role="row" className={`${COLS} rounded-tile bg-blue-50 px-4 py-3 text-sm font-semibold text-ink-700 `}>
           <span role="columnheader">Rank</span>
           <span role="columnheader">Site</span>
           <span role="columnheader">Band</span>
@@ -85,8 +85,8 @@ export default function RankTable({ sites, ranges, deltas, selectedId, onSelect 
                   )}
                 </span>
                 <span role="cell" className="min-w-0">
-                  <Link href={`/factories/${s.id}`} title={s.name} onClick={(e) => e.stopPropagation()} className="inline-block max-w-full truncate align-bottom font-semibold text-ink-900 hover:underline">{s.name}</Link>
-                  <span className="block truncate text-sm text-ink-500">{s.supplierName}</span>
+                  <Link href={`/factories/${s.id}`} title={s.name} onClick={(e) => e.stopPropagation()} className="block font-semibold text-ink-900 hover:underline">{s.name}</Link>
+                  <span className="block text-sm text-ink-500">{s.supplierName}</span>
                 </span>
                 <span role="cell"><BandPill band={s.band} compact /></span>
                 <span role="cell" className="num text-right">{fmtScore(s.R)}</span>

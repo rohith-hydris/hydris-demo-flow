@@ -20,7 +20,7 @@ export const RowLink = ({ href, children }: { href: string; children: ReactNode 
   <Link href={href} className="inline-flex min-h-11 items-center text-base font-bold text-brand hover:underline">{children}</Link>
 );
 
-// Dense table. Scrolls inside its own container, header and first column stay put.
+// Dense table. Scrolls sideways inside its own container (first column stays put); the page handles vertical scroll.
 // With `renderCard`, phones get a stacked list instead of the table.
 export default function DataTable<T>({
   columns, rows, rowKey, rowHref, caption, minWidth = "1100px", renderCard, rowClassName,
@@ -29,7 +29,7 @@ export default function DataTable<T>({
   minWidth?: string; renderCard?: (r: T) => ReactNode; rowClassName?: (r: T) => string;
 }) {
   const table = (
-    <div className={`card max-h-[80vh] overflow-auto ${renderCard ? "hidden md:block" : ""}`}>
+    <div className={`card overflow-x-auto ${renderCard ? "hidden md:block" : ""}`}>
       <table className="w-full border-separate border-spacing-0 text-left text-[15px]" style={{ minWidth }}>
         <caption className="sr-only">{caption}</caption>
         <thead>

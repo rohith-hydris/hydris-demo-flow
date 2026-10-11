@@ -32,8 +32,8 @@ export interface RiskCatalogueEntry {
   countryLevel: boolean;
 }
 
-// Names and chip labels follow PRODUCT 4.2 and 4.4. The category split is my reading of the Aqueduct groups
-// and the five groups named in 4.4; the spec does not assign each indicator to a group.
+// Names and chip labels follow PRODUCT 4.2 and 4.4. The category split follows the V2 PRD (Section 5.1):
+// Downstream is cep alone; udw, usa and rri sit under Regulatory and reputational.
 export const riskCatalogue: RiskCatalogueEntry[] = [
   { code: "bws", name: "Baseline water stress", shortName: "Water stress", category: "Physical quantity", countryLevel: false },
   { code: "bwd", name: "Baseline water depletion", shortName: "Water depletion", category: "Physical quantity", countryLevel: false },
@@ -44,9 +44,9 @@ export const riskCatalogue: RiskCatalogueEntry[] = [
   { code: "rfr", name: "Riverine flood risk", shortName: "Flood", category: "Physical quantity", countryLevel: false },
   { code: "cfr", name: "Coastal flood risk", shortName: "Coastal flood", category: "Physical quantity", countryLevel: false },
   { code: "ucw", name: "Untreated connected wastewater", shortName: "Untreated wastewater", category: "Physical quality", countryLevel: true },
-  { code: "cep", name: "Coastal eutrophication potential", shortName: "Coastal eutrophication", category: "Physical quality", countryLevel: false },
-  { code: "udw", name: "Unimproved and no drinking water", shortName: "Drinking water", category: "Downstream", countryLevel: false },
-  { code: "usa", name: "Unimproved and no sanitation", shortName: "Sanitation", category: "Downstream", countryLevel: false },
+  { code: "cep", name: "Coastal eutrophication potential", shortName: "Coastal eutrophication", category: "Downstream", countryLevel: false },
+  { code: "udw", name: "Unimproved and no drinking water", shortName: "Drinking water", category: "Regulatory and reputational", countryLevel: false },
+  { code: "usa", name: "Unimproved and no sanitation", shortName: "Sanitation", category: "Regulatory and reputational", countryLevel: false },
   { code: "rri", name: "RepRisk country ESG risk index", shortName: "Reputational risk", category: "Regulatory and reputational", countryLevel: true },
   { code: "tex", name: "Overall water risk, textile weighting", shortName: "Overall textile risk", category: "Composite", countryLevel: false },
 ];

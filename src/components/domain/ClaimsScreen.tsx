@@ -49,8 +49,8 @@ function ClaimItem({ row, canValidate }: { row: ClaimRow; canValidate: boolean }
           </div>
         </div>
         <div className="min-w-0">
-          <Link href={`/factories/${site.id}?tab=projects`} className="block truncate font-semibold text-ink-900 hover:underline">{site.name}</Link>
-          <span className="block truncate text-sm text-ink-500">{site.supplierName}</span>
+          <Link href={`/factories/${site.id}?tab=projects`} className="block font-semibold text-ink-900 hover:underline">{site.name}</Link>
+          <span className="block text-sm text-ink-500">{site.supplierName}</span>
         </div>
         <div className="min-w-0">
           <p className="num font-semibold text-ink-900">{fmtClaim(p.claim)} <span className="font-normal text-ink-500">claimed</span></p>
@@ -81,8 +81,8 @@ function ReportItem({ row, canValidate }: { row: ReportRow; canValidate: boolean
           <StateStrip states={reportStates(doc.state)} className="mt-1.5" />
         </div>
         <div className="min-w-0">
-          <Link href={`/factories/${site.id}?tab=evidence`} className="block truncate font-semibold text-ink-900 hover:underline">{site.name}</Link>
-          <span className="block truncate text-sm text-ink-500">{site.supplierName}</span>
+          <Link href={`/factories/${site.id}?tab=evidence`} className="block font-semibold text-ink-900 hover:underline">{site.name}</Link>
+          <span className="block text-sm text-ink-500">{site.supplierName}</span>
         </div>
         <ReadinessPill state={doc.state} />
         <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
@@ -113,8 +113,8 @@ function InspectionItem({ row, canValidate }: { row: InspectionRow; canValidate:
           <StateStrip states={inspectionStates(i.status)} className="mt-1.5" />
         </div>
         <div className="min-w-0">
-          <Link href={`/factories/${site.id}?tab=evidence`} className="block truncate font-semibold text-ink-900 hover:underline">{site.name}</Link>
-          <span className="block truncate text-sm text-ink-500">{site.supplierName}</span>
+          <Link href={`/factories/${site.id}?tab=evidence`} className="block font-semibold text-ink-900 hover:underline">{site.name}</Link>
+          <span className="block text-sm text-ink-500">{site.supplierName}</span>
         </div>
         <div className="min-w-0"><span className="block text-sm text-ink-500">Source</span><span className="block font-semibold text-ink-900">{i.source}</span></div>
         {ok ? <StatusPill tone="positive" shape="circle" label="Validated" /> : <StatusPill tone="caution" shape="diamond" label="Needs review" />}

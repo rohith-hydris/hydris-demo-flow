@@ -48,17 +48,17 @@ export default function OpportunitiesTab() {
           const oppId = imports[importKey(f)];
           return (
             <li key={f.id} className={`card p-5 ${selected === f.id ? "ring-2 ring-blue-500" : ""}`}>
-              <div className="grid items-center gap-x-5 gap-y-3 lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1.2fr)_auto]">
+              <div className="grid items-center gap-x-5 gap-y-3 lg:grid-cols-[minmax(0,2.6fr)_minmax(0,1.2fr)_auto]">
                 <div>
                   <p className="font-semibold text-ink-900">{f.id} · {names[f.factoryId]}</p>
                   <p className="text-ink-700">{f.finding}</p>
+                  <p className="mt-2">
+                    {oppId
+                      ? <StatusPill tone="positive" shape="circle" label={`Imported as ${oppId}`} />
+                      : <StatusPill tone="info" shape="ring" label={`New: candidate ${f.candidate}`} />}
+                  </p>
                 </div>
                 <p className="text-[15px] text-ink-500">Source {f.sourceAssessmentId} ({f.assessmentDate}), version {f.version}</p>
-                <p>
-                  {oppId
-                    ? <StatusPill tone="positive" shape="circle" label={`Imported as ${oppId}`} />
-                    : <StatusPill tone="info" shape="ring" label={`New: candidate ${f.candidate}`} />}
-                </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <button type="button" className="btn btn-primary min-h-11 px-5 text-sm" onClick={() => onImport(f)}>
                     <Download className="size-4" aria-hidden="true" /> Import as project opportunity
