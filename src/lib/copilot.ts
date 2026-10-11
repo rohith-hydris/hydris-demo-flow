@@ -19,6 +19,7 @@ import { GRADE_MEANING, traceLedgerEntry, type Trace } from "./trace";
 import { fillTokens, makeTokenCtx, offTrackSites, rankedTechnologies, tokensIn, type CopilotScope, type TokenCtx } from "./tokens";
 import type { Band, Dimension, Pillar, Quadrant, ReadinessState, Severity, Tier } from "./types";
 import { severityRank } from "./ops";
+import { VERDICT_CLOSING, stateEffects, type StateEffect } from "./states";
 
 export { OUT_OF_SCOPE_REPLY, VALIDATION_BRAND_ONLY_REPLY };
 export { FALLBACK_REPLY as FALLBACK_REPLY_FOR_TESTS };
@@ -207,8 +208,8 @@ export type ResolvedBlock =
   | { kind: "table"; columns: string[]; rows: string[][] }
   | { kind: "offTrack"; groups: { supplier: string; plants: { id: string; name: string; severity: Severity; message: string; age: string | null }[] }[] }
   | { kind: "techTable"; weights: string; rows: { name: string; technicalFit: string; expectedBenefit: string; stability: string; dataQuality: string; match: string; note: string | null; top: boolean }[] }
-  | { kind: "checklist"; title: string; checks: { name: string; result: "Pass" | "Warn" | "Fail"; reason?: string }[]; verdict: { label: string; tone: "negative" | "caution" | "positive" | "neutral"; effect: string } }
-  | { kind: "inspection"; id: string; factory: string; date: string; steps: number; passed: number; trust: number; status: string; counts: { pass: number; warn: number; fail: number }; nonPass: InspectionStep[]; layers: string[] }
+  | { kind: "checklist"; title: string; checks: { name: string; result: "Pass" | "Warn" | "Fail"; reason?: string }[]; verdict: { label: string; tone: "negative" | "caution" | "positive" | "neutral"; effect: string }; stateEffects: StateEffect[]; closing: string }
+  | { kind: "inspection"; stateEffects: StateEffect[]; closing: string; id: string; factory: string; date: string; steps: number; passed: number; trust: number; status: string; counts: { pass: number; warn: number; fail: number }; nonPass: InspectionStep[]; layers: string[] }
   | { kind: "brsr"; available: boolean; factoryId: string; factoryName: string; docs: DocumentRecord[]; gaps: Gap[]; draft: { title: string; sentences: { id: string; text: string; cite: string; trace: Trace }[]; footer: string } }
   | { kind: "gapReport"; supplierName: string; factories: { id: string; name: string; counts: Record<ReadinessState, number> }[]; gaps: GapRow[] }
   | { kind: "citations"; items: ResolvedCitation[] }
@@ -355,13 +356,15 @@ function buildBlock(spec: BlockSpec, ctx: TokenCtx): ResolvedBlock | null {
         kind: "checklist", title: spec.title,
         checks: spec.checks.map((c) => ({ name: c.name, result: c.result, reason: c.reason ? fillTokens(c.reason, ctx) : undefined })),
         verdict: { label: spec.verdict.label, tone: spec.verdict.tone, effect: fillTokens(spec.verdict.effect, ctx) },
+        stateEffects: stateEffects(spec.states, spec.project ? projects.find((x) => x.id === spec.project)?.states ?? null : null),
+        closing: VERDICT_CLOSING,
       };
     case "inspection": {
       const i = inspections.find((x) => x.id === spec.id)!;
       const detail = i.stepDetail ?? [];
       const site = ctx.sites.find((s) => s.id === i.factoryId)!;
       return {
-        kind: "inspection", id: i.id, factory: site.name, date: i.date, steps: i.steps, passed: i.passed, trust: trustScore(i), status: i.status,
+        kind: "inspection", stateEffects: stateEffects(spec.states, null), closing: VERDICT_CLOSING, id: i.id, factory: site.name, date: i.date, steps: i.steps, passed: i.passed, trust: trustScore(i), status: i.status,
         counts: { pass: i.passed, warn: detail.filter((s) => s.result === "Warn").length, fail: detail.filter((s) => s.result === "Fail").length },
         nonPass: detail, layers: LAYERS,
       };

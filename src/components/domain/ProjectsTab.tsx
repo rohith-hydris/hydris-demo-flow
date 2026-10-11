@@ -8,14 +8,18 @@ import { attributionNote, displayNote, projectBenefit, projectsFor } from "@/src
 import { fmtClaim, claimNote } from "@/src/lib/measure";
 import type { Site } from "@/src/lib/selectors";
 import { traceProject } from "@/src/lib/trace";
-import { EmptyState, ProjectStatusPill, StatusPill } from "@/src/components/ui";
+import { summaryStatus } from "@/src/lib/states";
+import { EmptyState, ProjectStatusPill, StateStrip, StatusPill } from "@/src/components/ui";
+import ProjectDrawerButton from "./ProjectDrawer";
 import { InfoButton } from "./Trace";
 
-function ProjectCard({ project: p, canValidate }: { project: ProjectRecord; canValidate: boolean }) {
+function ProjectCard({ project: p, siteName, canValidate }: { project: ProjectRecord; siteName: string; canValidate: boolean }) {
   const [uploaded, setUploaded] = useState(false);
   const b = projectBenefit(p);
-  const flagged = p.status === "Flagged";
-  const notCounted = p.status === "Not counted";
+  // The single badge is a summary computed from the five review states.
+  const status = summaryStatus(p.states);
+  const flagged = status === "Flagged";
+  const notCounted = status === "Not counted";
   const cardClass = flagged
     ? "border-l-4 border-l-[var(--negative-fill)]"
     : notCounted ? "border-dashed border-[var(--neutral-line)] bg-[var(--neutral-bg)] shadow-none" : "";
@@ -24,8 +28,9 @@ function ProjectCard({ project: p, canValidate }: { project: ProjectRecord; canV
     <li className={`card flex flex-col p-5 ${cardClass}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h4 className="min-w-0 flex-1">{p.name}</h4>
-        <ProjectStatusPill status={p.status} />
+        <ProjectStatusPill status={status} />
       </div>
+      <StateStrip states={p.states} className="mt-2" />
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {p.method !== "n/a" && <StatusPill tone="neutral" shape="square" label={p.method} />}
         <StatusPill tone="info" shape="ring" label={`Feeds ${p.pillar} ${p.dimension}`} />
@@ -44,12 +49,12 @@ function ProjectCard({ project: p, canValidate }: { project: ProjectRecord; canV
         </div>
         <div>
           <dt className="flex items-center gap-1 text-sm text-ink-500">Counted <InfoButton trace={traceProject(p)} /></dt>
-          {p.status === "Validated" || flagged ? (
+          {status === "Validated" || flagged ? (
             <>
               <dd className="num font-display text-[22px] font-semibold leading-7 text-ink-900">{fmtClaim(b.counted)}</dd>
               <dd className="text-sm text-ink-500">Low value {fmtClaim(b.low)}</dd>
             </>
-          ) : p.status === "Pending validation" ? (
+          ) : status === "Pending validation" ? (
             <>
               <dd className="font-display text-[22px] font-semibold leading-7 text-ink-500">Awaiting validation</dd>
               <dd className="text-sm text-ink-500">Counts {fmtClaim(b.attributed)} once validated</dd>
@@ -62,9 +67,9 @@ function ProjectCard({ project: p, canValidate }: { project: ProjectRecord; canV
 
       {p.note && <p className={`mt-4 text-ink-700 ${flagged ? "rounded-tile bg-[var(--negative-bg)] p-3" : ""}`}>{displayNote(p, canValidate)}</p>}
 
-      {!notCounted && (
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
-          {canValidate ? (
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+          <ProjectDrawerButton project={p} siteName={siteName} />
+          {notCounted ? null : canValidate ? (
             <Link href={`/copilot?agent=validation&claim=${p.id}`} className="btn btn-primary">
               <Sparkles className="size-4" aria-hidden="true" /> Validate with agent
             </Link>
@@ -75,7 +80,6 @@ function ProjectCard({ project: p, canValidate }: { project: ProjectRecord; canV
           )}
           <span className="sr-only" role="status">{uploaded && !canValidate ? "Evidence uploaded" : ""}</span>
         </div>
-      )}
     </li>
   );
 }
@@ -111,7 +115,7 @@ export default function ProjectsTab({ site, canValidate }: { site: Site; canVali
         return (
           <section key={key} aria-labelledby={`proj-${key}`}>
             <h2 id={`proj-${key}`} className="mb-4 text-[22px] leading-[30px]">{title}</h2>
-            <ul className="grid gap-5 lg:grid-cols-2">{list.map((p) => <ProjectCard key={p.id} project={p} canValidate={canValidate} />)}</ul>
+            <ul className="grid gap-5 lg:grid-cols-2">{list.map((p) => <ProjectCard key={p.id} project={p} siteName={site.name} canValidate={canValidate} />)}</ul>
           </section>
         );
       })}

@@ -14,9 +14,11 @@ import {
 } from "@/src/lib/queue";
 import { getSites } from "@/src/lib/selectors";
 import {
-  AppMain, CitationChip, EmptyState, PageHeader, ProjectStatusPill, ReadinessPill, ScoreBar, SelectControl, StatusPill, Tabs, tabIds, projectStatusMeta,
+  AppMain, CitationChip, EmptyState, PageHeader, ProjectStatusPill, ReadinessPill, ScoreBar, SelectControl, StateStrip, StatusPill, Tabs, tabIds, projectStatusMeta,
 } from "@/src/components/ui";
+import { reportStates, inspectionStates, summaryStatus } from "@/src/lib/states";
 import MockAction from "./MockAction";
+import ProjectDrawerButton from "./ProjectDrawer";
 import TrustRing from "./TrustRing";
 
 const ID_PREFIX = "claims";
@@ -33,8 +35,9 @@ function GradeChip({ grade }: { grade: string }) {
 
 function ClaimItem({ row, canValidate }: { row: ClaimRow; canValidate: boolean }) {
   const { project: p, site } = row;
-  const flagged = p.status === "Flagged";
-  const notCounted = p.status === "Not counted";
+  const status = summaryStatus(p.states);
+  const flagged = status === "Flagged";
+  const notCounted = status === "Not counted";
   return (
     <li className={`card p-4 ${flagged ? "border-l-4 border-l-[var(--negative-fill)]" : notCounted ? "border-dashed border-[var(--neutral-line)] bg-[var(--neutral-bg)] shadow-none" : ""}`}>
       <div className="grid items-center gap-x-5 gap-y-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.4fr)_auto_auto_auto]">
@@ -53,7 +56,7 @@ function ClaimItem({ row, canValidate }: { row: ClaimRow; canValidate: boolean }
           <p className="num font-semibold text-ink-900">{fmtClaim(p.claim)} <span className="font-normal text-ink-500">claimed</span></p>
           <p className="text-sm text-ink-500">{[claimNote(p.claim), attributionNote(p)].filter(Boolean).join(" ")}</p>
         </div>
-        <ProjectStatusPill status={p.status} />
+        <ProjectStatusPill status={status} />
         <GradeChip grade={p.grade} />
         <div className="flex justify-start lg:justify-end">
           {notCounted ? <span className="text-sm text-ink-500">Excluded: {p.gateReason}</span>
@@ -61,6 +64,7 @@ function ClaimItem({ row, canValidate }: { row: ClaimRow; canValidate: boolean }
             : <MockAction label="Upload evidence" done="Uploaded (demo)" icon={Upload} />}
         </div>
       </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><StateStrip states={p.states} /><ProjectDrawerButton project={p} siteName={site.name} /></div>
       {flagged && <p className="mt-3 rounded-tile bg-[var(--negative-bg)] p-3 text-ink-700">{displayNote(p, canValidate)}</p>}
     </li>
   );
@@ -74,6 +78,7 @@ function ReportItem({ row, canValidate }: { row: ReportRow; canValidate: boolean
         <div className="min-w-0">
           <h4>{doc.name}</h4>
           <p className="text-sm text-ink-500">{doc.period}{doc.detail ? ` · ${doc.detail}` : ""}</p>
+          <StateStrip states={reportStates(doc.state)} className="mt-1.5" />
         </div>
         <div className="min-w-0">
           <Link href={`/factories/${site.id}?tab=evidence`} className="block truncate font-semibold text-ink-900 hover:underline">{site.name}</Link>
@@ -105,6 +110,7 @@ function InspectionItem({ row, canValidate }: { row: InspectionRow; canValidate:
         <div>
           <h4>{i.id}</h4>
           <p className="text-sm text-ink-500">{i.date} · {i.passed} of {i.steps} steps passed</p>
+          <StateStrip states={inspectionStates(i.status)} className="mt-1.5" />
         </div>
         <div className="min-w-0">
           <Link href={`/factories/${site.id}?tab=evidence`} className="block truncate font-semibold text-ink-900 hover:underline">{site.name}</Link>

@@ -5,7 +5,8 @@ import { FileCheck2, FileText, Sparkles, Upload } from "lucide-react";
 import type { DocumentRecord, InspectionRecord } from "@/src/data/types";
 import { documentsForFactory, inspectionsFor, READINESS_STATES, readinessCounts, trustScore } from "@/src/lib/claims";
 import type { Site } from "@/src/lib/selectors";
-import { ReadinessPill, Shape, StatusPill, readinessMeta } from "@/src/components/ui";
+import { inspectionStates, reportStates } from "@/src/lib/states";
+import { ReadinessPill, Shape, StateStrip, StatusPill, readinessMeta } from "@/src/components/ui";
 import AffectedOutputsPanel from "./AffectedOutputsPanel";
 import MockAction from "./MockAction";
 import TrustRing from "./TrustRing";
@@ -31,6 +32,7 @@ function ReportRow({ d, canValidate }: { d: DocumentRecord; canValidate: boolean
         <p className="font-semibold text-ink-900">{d.name}</p>
         <p className="text-sm text-ink-500">{d.period}{d.detail ? ` · ${d.detail}` : ""}</p>
         <div className="mt-1.5"><ReadinessPill state={d.state} /></div>
+        <StateStrip states={reportStates(d.state)} className="mt-1.5" />
       </div>
       {canValidate ? (
         <Link href={`/copilot?agent=validation&report=${d.id}`} className="btn btn-secondary min-h-11 px-4 text-sm"><Sparkles className="size-4" aria-hidden="true" /> Validate with agent</Link>
@@ -53,6 +55,7 @@ function InspectionRow({ i, canValidate }: { i: InspectionRecord; canValidate: b
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-ink-900">{i.id} <span className="font-normal text-ink-500">· {i.date}</span></p>
         <p className="text-sm text-ink-500">{i.passed} of {i.steps} steps passed</p>
+        <StateStrip states={inspectionStates(i.status)} className="mt-1.5" />
         <div className="mt-1.5">{ok ? <StatusPill tone="positive" shape="circle" label="Validated" /> : <StatusPill tone="caution" shape="diamond" label="Needs review" />}</div>
       </div>
       {canValidate ? (

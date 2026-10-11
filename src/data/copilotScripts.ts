@@ -1,5 +1,5 @@
 import type { Role } from "@/src/lib/roles";
-import type { CheckResult } from "@/src/lib/types";
+import type { CheckResult, ReviewStates } from "@/src/lib/types";
 
 // The copilot's scripted conversations (PRODUCT 4.7 and sections 7 to 9), as data.
 //
@@ -49,8 +49,8 @@ export type BlockSpec =
   | { kind: "table"; columns: string[]; rows: string[][] }
   | { kind: "offTrack" }
   | { kind: "techTable" }
-  | { kind: "checklist"; title: string; checks: CheckSpec[]; verdict: { label: string; tone: "negative" | "caution" | "positive" | "neutral"; effect: string } }
-  | { kind: "inspection"; id: string }
+  | { kind: "checklist"; title: string; /** V2 14: the five states this verdict sets. Others are unchanged. */ states: Partial<ReviewStates>; /** Project whose current states fill the unchanged rows. */ project?: string; checks: CheckSpec[]; verdict: { label: string; tone: "negative" | "caution" | "positive" | "neutral"; effect: string } }
+  | { kind: "inspection"; id: string; states: Partial<ReviewStates> }
   | { kind: "readiness" }
   | { kind: "brsr" }
   | { kind: "gapReport" }
@@ -171,7 +171,8 @@ export const scripts: ScriptDef[] = [
     blocks: [
       { kind: "text", text: "I ran eight checks on **{{project.PRJ-201.name}}** ({{project.PRJ-201.id}}), claimed at {{project.PRJ-201.claimed}} at {{site.F02.name}}." },
       {
-        kind: "checklist", title: "Sub-basin project claim: PRJ-201",
+        kind: "checklist", title: "Sub-basin project claim: PRJ-201", project: "PRJ-201",
+        states: { evidenceAcceptance: "Rejected", calculationValidity: "Needs recalculation", benefitState: "Not validated", claimEligibility: "Allocation conflict" },
         checks: [
           chk("Project inside the sub-basin polygon", "Pass"),
           chk("Hydrologically connected to the site's source", "Pass"),
@@ -205,7 +206,8 @@ export const scripts: ScriptDef[] = [
     blocks: [
       { kind: "text", text: "I ran eight checks on **{{project.PRJ-103.name}}** ({{project.PRJ-103.id}}), a basin claim of {{project.PRJ-103.claimed}} at {{project.PRJ-103.share}} attribution." },
       {
-        kind: "checklist", title: "Basin project claim: PRJ-103",
+        kind: "checklist", title: "Basin project claim: PRJ-103", project: "PRJ-103",
+        states: { evidenceAcceptance: "Accepted" },
         checks: [
           chk("Inside the basin polygon", "Pass"),
           chk("Connected to the site's source", "Pass"),
@@ -232,7 +234,7 @@ export const scripts: ScriptDef[] = [
     tools: ["get_inspection_report", "run_step_checks"], requiresSite: "F12",
     blocks: [
       { kind: "text", text: "**{{inspection.INS-0412.id}}** at {{site.F12.name}} has {{inspection.INS-0412.steps}} steps. Trust score {{inspection.INS-0412.trust}}, report status **{{inspection.INS-0412.status}}**." },
-      { kind: "inspection", id: "INS-0412" },
+      { kind: "inspection", id: "INS-0412", states: { evidenceAcceptance: "Pending" } },
       { kind: "citations", items: [{ label: "INS-0412", href: "/factories/F12?tab=evidence" }] },
       {
         kind: "actions", items: [
@@ -252,6 +254,7 @@ export const scripts: ScriptDef[] = [
       { kind: "text", text: "I ran six checks on the lab report for **{{site.F01.name}}**." },
       {
         kind: "checklist", title: "Audit report: ETP lab report, Tiruppur Mill",
+        states: { evidenceAcceptance: "Rejected" },
         checks: [
           chk("Lab is NABL accredited", "Pass"),
           chk("Report period covers FY2025-26", "Pass"),
@@ -278,6 +281,7 @@ export const scripts: ScriptDef[] = [
       { kind: "text", text: "I ran five checks on the third-party ETP audit report for **{{site.F02.name}}**." },
       {
         kind: "checklist", title: "Audit report: third-party ETP audit, Avinashi Road Dye House",
+        states: { evidenceAcceptance: "Rejected" },
         checks: [
           chk("Auditor accreditation", "Pass"),
           chk("Report date within period", "Fail", "The report is dated {{doc.F02-D11.period}}, which is out of period."),

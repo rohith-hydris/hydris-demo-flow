@@ -1,8 +1,9 @@
 import { AlertTriangle, CheckCircle2, XCircle, type LucideIcon } from "lucide-react";
 import type { ResolvedBlock } from "@/src/lib/copilot";
+import type { StateEffect } from "@/src/lib/states";
 import { fmtPct1 } from "@/src/lib/format";
 import type { CheckResult } from "@/src/lib/types";
-import { StatusPill, checkMeta } from "@/src/components/ui";
+import { StatusPill, checkMeta, stateMeta } from "@/src/components/ui";
 import TrustRing from "@/src/components/domain/TrustRing";
 
 type B<K extends ResolvedBlock["kind"]> = Extract<ResolvedBlock, { kind: K }>;
@@ -25,6 +26,28 @@ function CheckRow({ name, result, reason }: { name: string; result: CheckResult;
   );
 }
 
+/** V2 2 and 14: which of the five review states this verdict sets, and the line that closes every verdict. */
+function StateEffects({ effects, closing }: { effects: StateEffect[]; closing: string }) {
+  return (
+    <div className="border-t border-line p-4">
+      <p className="mb-2 text-sm font-semibold text-ink-700">What this verdict changes in the five review states</p>
+      <ul className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+        {effects.map((e) => (
+          <li key={e.key} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]">
+            <span className="font-semibold text-ink-900">{e.name}:</span>
+            {e.outcome === "set" && e.value ? (
+              <><StatusPill {...stateMeta(e.key, e.value as never)} label={`Set to ${e.value}`} className="!min-h-6 !text-[13px]" /></>
+            ) : (
+              <span className="text-ink-500">{e.value ? `No change (${e.value})` : "No change"}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 font-semibold text-ink-900">{closing}</p>
+    </div>
+  );
+}
+
 /** The validation checklist: a verdict bar with the effect on the score, then one row per check. */
 export function ChecklistBlock({ block }: { block: B<"checklist"> }) {
   const { verdict, checks } = block;
@@ -40,6 +63,7 @@ export function ChecklistBlock({ block }: { block: B<"checklist"> }) {
         <p className="mb-3 text-sm font-semibold text-ink-700">{block.title} · {n("Pass")} Pass, {n("Warn")} Warn, {n("Fail")} Fail</p>
         <ul className="divide-y divide-line">{checks.map((c) => <CheckRow key={c.name} {...c} />)}</ul>
       </div>
+      <StateEffects effects={block.stateEffects} closing={block.closing} />
     </div>
   );
 }
@@ -77,6 +101,7 @@ export function InspectionBlock({ block }: { block: B<"inspection"> }) {
         {block.layers.map((l) => <li key={l} className="inline-flex min-h-7 items-center rounded-full border border-panel-line bg-blue-50 px-3 text-sm text-ink-700">{l}</li>)}
       </ul>
       <p className="mt-3 text-sm text-ink-500">Only validated steps reach the Evidence Store.</p>
+      <div className="-mx-4 -mb-4 mt-4 rounded-b-tile"><StateEffects effects={block.stateEffects} closing={block.closing} /></div>
     </div>
   );
 }

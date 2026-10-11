@@ -13,12 +13,13 @@ export interface NavItem {
   sparkle?: boolean;
 }
 
-// PRODUCT 3 and V2 15 (Projects is added in a later phase): same items for both roles; the Portfolio item adapts its label.
+// PRODUCT 3 and V2 15 : same items for both roles; the Portfolio item adapts its label.
 export function navItemsFor(role: Role): NavItem[] {
   return [
     { href: "/portfolio", label: role === "brand" ? "Portfolio" : "My factories", match: ["/portfolio", "/suppliers", "/factories"] },
     { href: "/ranking", label: "Ranking", match: ["/ranking"] },
     { href: "/impact", label: "Impact", match: ["/impact"] },
+    { href: "/projects", label: "Projects", match: ["/projects"] },
     { href: "/claims", label: "Claims & Evidence", match: ["/claims"] },
     { href: "/copilot", label: "Copilot", match: ["/copilot"], sparkle: true },
   ];

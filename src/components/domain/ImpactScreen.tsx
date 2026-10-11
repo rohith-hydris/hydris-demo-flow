@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useProjects } from "@/src/context/ProjectsContext";
 import { useRole, useScope } from "@/src/context/RoleContext";
 import { suppliers } from "@/src/data/suppliers";
 import { buildImpact, POLLUTANT_KEYS, POLLUTANT_LABEL, type OutcomeRow } from "@/src/lib/impactView";
@@ -63,7 +64,8 @@ export default function ImpactScreen() {
   const factoryId = inSupplier.some((s) => s.id === factoryParam) ? factoryParam : null;
   const sites = useMemo(() => inSupplier.filter((s) => !factoryId || s.id === factoryId), [inSupplier, factoryId]);
 
-  const impact = useMemo(() => buildImpact(sites), [sites]);
+  const { approved } = useProjects();
+  const impact = useMemo(() => buildImpact(sites, approved), [sites, approved]);
   const scopeLabel = factoryId ? sites[0].name : supplierId ? suppliers.find((s) => s.id === supplierId)!.name : role === "brand" ? "All suppliers" : "Your factories";
 
   return (

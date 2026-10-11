@@ -73,9 +73,12 @@ const fmtAmount = (dim: ImpactDimension, a: Amount) =>
   dim === "Quantity" ? `${fmtInt(a.m3)} m³` : dim === "Access" ? `${fmtInt(a.people)} people`
     : `${fmtInt(a.kg.tss)} / ${fmtInt(a.kg.tn)} / ${fmtInt(a.kg.tp)} kg (TSS / TN / TP)`;
 
-const forecastOpps = (factoryId: FactoryId): Opportunity[] => {
-  const s = scenarios.find((x) => x.id === FORECAST_SCENARIO_ID);
-  return (s?.items ?? []).map((id) => opportunities.find((o) => o.id === id)).filter((o): o is Opportunity => !!o && o.factoryId === factoryId);
+/** The approved delivery baseline: its scenario id and the opportunities in it. Defaults to the demo's S1. */
+export interface ApprovedBaseline { id: string; items: string[] }
+export const defaultBaseline = (): ApprovedBaseline => ({ id: FORECAST_SCENARIO_ID, items: scenarios.find((x) => x.id === FORECAST_SCENARIO_ID)?.items ?? [] });
+
+const forecastOpps = (factoryId: FactoryId, baseline: ApprovedBaseline): Opportunity[] => {
+  return baseline.items.map((id) => opportunities.find((o) => o.id === id)).filter((o): o is Opportunity => !!o && o.factoryId === factoryId);
 };
 
 const traceFor = (
@@ -87,7 +90,7 @@ const traceFor = (
 });
 
 /** Everything one factory contributes, as outcome rows plus the entries the panels add up. */
-function factoryOutcomes(site: Site): { rows: OutcomeRow[]; entries: Entry[] } {
+function factoryOutcomes(site: Site, baseline: ApprovedBaseline): { rows: OutcomeRow[]; entries: Entry[] } {
   const rows: OutcomeRow[] = [];
   const entries: Entry[] = [];
   const add = (
@@ -149,7 +152,7 @@ function factoryOutcomes(site: Site): { rows: OutcomeRow[]; entries: Entry[] } {
   }
 
   // Forecast: opportunities in the approved scenario. Never added to Measured or Validated.
-  for (const o of forecastOpps(site.id)) {
+  for (const o of forecastOpps(site.id, baseline)) {
     const a = scaleAmount(o.forecast.unit === "kg" ? { unit: "kg", tss: o.forecast.tss, tn: o.forecast.tn, tp: o.forecast.tp } : o.forecast, 1);
     const dim = DIMENSION_OF[o.dimension];
     add(o.pillar, dim, "Forecast", a, {
@@ -157,7 +160,7 @@ function factoryOutcomes(site: Site): { rows: OutcomeRow[]; entries: Entry[] } {
       evidence: "Forecast, no delivery evidence yet",
       trace: traceFor(site, o.name, fmtAmount(dim, a),
         ["Forecast benefit from the opportunity, central value", `Uncertainty ±${Math.round(o.uncertainty * 100)}%`, "A forecast never counts as Measured or Validated."],
-        [{ label: "Opportunity", value: o.id }, { label: "Scenario", value: `${FORECAST_SCENARIO_ID} (delivery baseline)` },
+        [{ label: "Opportunity", value: o.id }, { label: "Scenario", value: `${baseline.id} (delivery baseline)` },
           ...(o.sourceFindingId ? [{ label: "Lite finding", value: o.sourceFindingId }] : []), { label: "Measurement needs", value: o.measurementNeeds },
           { label: "Source opportunity", value: o.id }], null, "Demo estimate. Forecast only."),
     });
@@ -177,8 +180,8 @@ const targetOf = (site: Site, pillar: Pillar, dim: Dimension): Amount | null => 
 };
 
 /** `sites` are the factories in scope, already filtered by role. */
-export function buildImpact(sites: Site[]): ImpactSummary {
-  const all = sites.map(factoryOutcomes);
+export function buildImpact(sites: Site[], baseline: ApprovedBaseline = defaultBaseline()): ImpactSummary {
+  const all = sites.map((s) => factoryOutcomes(s, baseline));
   const entries = all.flatMap((x) => x.entries);
 
   const row = (dim: ImpactDimension, pick: (a: Amount) => number, targetDim: Dimension): PillarRow[] =>
