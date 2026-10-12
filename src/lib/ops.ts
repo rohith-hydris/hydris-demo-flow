@@ -1,6 +1,7 @@
 import { ops } from "@/src/data/ops";
 import { factories } from "@/src/data/factories";
 import type { OpsRecord } from "@/src/data/types";
+import { BEHIND_TARGET_SHARE, type ProRatedBenefit } from "./pwi";
 import type { FactoryId, Health, Severity, SupplierId, TierDirection, ZdhcTier } from "./types";
 
 // PRODUCT 5.7 (Module 06) and 6.9.
@@ -22,15 +23,32 @@ export const highestSeverity = (list: (Severity | null)[]): Severity | null =>
 
 /**
  * Off-track: highest open alert is Critical or High, or the plant had a tier drop, or its benefit is below 80% of the
- * pro-rated target (PRODUCT 6.9). The data gives no pro-rated target, so `benefitVsTargetPct` is optional and unused
- * for the demo sites. See the note in the Phase 1 report: the spec lists F01 and F12 as "benefit behind target" yet
- * not off-track, so applying this clause to them would contradict the 5.7 off-track list.
+ * pro-rated target (PRODUCT 6.9). `benefitVsTargetPct` is the pro-rated Availability share from proRatedBenefitShare, as a
+ * fraction. With the demo's months elapsed only F06 falls below it, so the off-track set is F06, F02 and F13 (PRODUCT 5.7).
  */
 export function isOffTrack(row: OpsRecord, benefitVsTargetPct?: number | null): boolean {
   const severe = row.highestAlert === "Critical" || row.highestAlert === "High";
   const dropped = row.tierChange !== null && tierDirection(row.tierChange.from, row.tierChange.to) === "downgrade";
-  const behind = benefitVsTargetPct != null && benefitVsTargetPct < 0.8;
+  const behind = benefitVsTargetPct != null && benefitVsTargetPct < BEHIND_TARGET_SHARE;
   return severe || dropped || behind;
+}
+
+/**
+ * The "benefit behind target" alert text, built from the pro-rated shares of the P3 Basin cells, or null when none is below
+ * 80%. Availability and Quality kg are pro-rated, people are not (see proRatedBenefitShare).
+ */
+export function benefitBehindMessage(benefit: ProRatedBenefit): string | null {
+  const behind = benefit.cells.filter((c) => c.pillar === "P3" && c.share < BEHIND_TARGET_SHARE).map((c) => c.dimension);
+  if (!behind.length) return null;
+  const list = behind.length === 1 ? behind[0] : `${behind.slice(0, -1).join(", ")} and ${behind[behind.length - 1]}`;
+  return `Benefit behind target: P3 Basin ${list} below 80% of pro-rated target`;
+}
+
+/** Fills in the derived benefit alert. With nothing behind target and no other message, a derived-only alert is dropped. */
+export function resolveOpsRow(row: OpsRecord, benefit: ProRatedBenefit): OpsRecord {
+  if (!row.benefitBehindAlert) return row;
+  const message = [benefitBehindMessage(benefit), row.alertMessage].filter(Boolean).join("; ") || null;
+  return { ...row, alertMessage: message, highestAlert: message ? row.highestAlert : null };
 }
 
 export interface Alert {

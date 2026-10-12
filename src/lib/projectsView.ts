@@ -16,13 +16,17 @@ const signedLakh = (n: number) => (n < 0 ? `-${fmtLakh(-n)}` : fmtLakh(n));
 
 export function fmtForecast(f: ForecastBenefit): string {
   return f.unit === "m3" ? `+${fmtInt(f.value)} m³/yr` : f.unit === "people" ? `+${fmtInt(f.value)} people`
+    : f.unit === "removal" ? fmtRemoval(f, 1)
     : `TSS ${fmtInt(f.tss)}, TN ${fmtInt(f.tn)}, TP ${fmtInt(f.tp)} kg/yr`;
 }
+/** Added percentage points of removal, naming only the pollutants that move. */
+const fmtRemoval = (f: { tss: number; tn: number; tp: number }, k: number) =>
+  [["TSS", f.tss], ["TN", f.tn], ["TP", f.tp]].filter(([, v]) => (v as number) > 0).map(([n, v]) => `${n} +${fmtInt((v as number) * k)}`).join(", ") + " points of removal";
 const pctOf = (u: number) => `±${Math.round(u * 100)}%`;
 export const fmtOutcome = (o: Opportunity) => `${fmtForecast(o.forecast)} (${pctOf(o.uncertainty)})`;
 const lowOf = (o: Opportunity): string => {
   const k = 1 - o.uncertainty, f = o.forecast;
-  return f.unit === "m3" ? `${fmtInt(f.value * k)} m³/yr` : f.unit === "people" ? `${fmtInt(f.value * k)} people` : `TSS ${fmtInt(f.tss * k)}, TN ${fmtInt(f.tn * k)}, TP ${fmtInt(f.tp * k)} kg/yr`;
+  return f.unit === "m3" ? `${fmtInt(f.value * k)} m³/yr` : f.unit === "people" ? `${fmtInt(f.value * k)} people` : f.unit === "removal" ? fmtRemoval(f, k) : `TSS ${fmtInt(f.tss * k)}, TN ${fmtInt(f.tn * k)}, TP ${fmtInt(f.tp * k)} kg/yr`;
 };
 
 /** Payback for one opportunity on its own, using the same rule as a scenario. */

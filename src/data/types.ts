@@ -23,12 +23,16 @@ export interface FactoryRecord {
   evidenceGrade: EvidenceGrade;
 }
 
-/** PRODUCT 5.4. P1 Quality is derived from pollutant removal, so it is not entered. */
-export interface CellScoreRecord {
+/**
+ * What a site delivered (PRODUCT 5.4, 5.9). Availability in m3 and Accessibility in people, per pillar; cell scores are
+ * computed from these against the targets. P1 Quality is derived from pollutant removal. P2 and P3 Quality carry no kg data,
+ * so `qualityScore` (0 to 1) is entered as before.
+ */
+export interface DeliveredRecord {
   factoryId: FactoryId;
-  availability: Record<Pillar, number>;
-  accessibility: Record<Pillar, number>;
-  quality: { P2: number; P3: number };
+  availabilityM3: Record<Pillar, number>;
+  accessibilityPeople: Record<Pillar, number>;
+  qualityScore: { P2: number; P3: number };
 }
 export interface RemovalRecord { factoryId: FactoryId; tss: number; tn: number; tp: number } // percent
 
@@ -47,6 +51,8 @@ export interface OpsRecord {
   tierChange: TierChange | null;
   highestAlert: Severity | null;
   alertMessage: string | null;
+  /** The Medium "benefit behind target" alert is derived from the pro-rated benefit share, not typed. `alertMessage` then holds only the rest. */
+  benefitBehindAlert?: boolean;
   /** Age of the alert in days where the spec states it. */
   alertAgeDays: number | null;
 }

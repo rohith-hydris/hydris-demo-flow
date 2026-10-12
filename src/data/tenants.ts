@@ -6,4 +6,6 @@ export const SUPPLIER_TENANT = { name: "Coromandel Denim Mills", initials: "CD" 
 
 export const REPORTING_PERIOD = { label: "FY2025-26", status: "Locked" } as const;
 export const CURRENT_MONTH = { label: "September 2026", status: "Draft" } as const;
+/** Demo estimate: months of the monitoring year elapsed, April to September 2026 (CURRENT_MONTH). Pro-rates annual targets. */
+export const MONTHS_ELAPSED = 6;
 export const TODAY = "10 Oct 2026";

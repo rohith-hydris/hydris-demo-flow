@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cellScores, removals } from "./cells";
+import { removals } from "./cells";
+import { delivered } from "./delivered";
 import { documents } from "./documents";
 import { factories } from "./factories";
 import { inspections } from "./inspections";
@@ -41,7 +42,7 @@ describe("dataset shape (PRODUCT 5.1 to 5.3)", () => {
 
   it("every factory has cell scores, removals, 14 risk scores and an ops row", () => {
     for (const id of ids) {
-      expect(cellScores.filter((c) => c.factoryId === id)).toHaveLength(1);
+      expect(delivered.filter((c) => c.factoryId === id)).toHaveLength(id === "F12" ? 0 : 1); // F12 uses the worked example
       expect(removals.filter((r) => r.factoryId === id)).toHaveLength(1);
       expect(riskScores.filter((r) => r.factoryId === id)).toHaveLength(1);
       expect(ops.filter((o) => o.factoryId === id)).toHaveLength(1);
@@ -50,8 +51,8 @@ describe("dataset shape (PRODUCT 5.1 to 5.3)", () => {
   });
 
   it("scores are in range", () => {
-    for (const c of cellScores) {
-      for (const v of [...Object.values(c.availability), ...Object.values(c.accessibility), ...Object.values(c.quality)]) {
+    for (const c of delivered) {
+      for (const v of Object.values(c.qualityScore)) {
         expect(v).toBeGreaterThanOrEqual(0);
         expect(v).toBeLessThanOrEqual(1);
       }
@@ -74,7 +75,7 @@ describe("dataset shape (PRODUCT 5.1 to 5.3)", () => {
 
   it("stores inputs only: no computed field (R, rank, tier, band, quadrant, PWI) is saved in the data", () => {
     const banned = /^(R|rank|tier|band|quadrant|pwi|sitePwi|volumetric|health|healthBand|offTrack)$/i;
-    for (const list of [factories, cellScores, ops, projects, suppliers] as object[][]) {
+    for (const list of [factories, delivered, ops, projects, suppliers] as object[][]) {
       for (const row of list) for (const key of Object.keys(row)) expect(key).not.toMatch(banned);
     }
   });

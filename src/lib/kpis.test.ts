@@ -19,7 +19,7 @@ describe("KPI strips (PRODUCT 4.2, DESIGN 5.2)", () => {
     expect(byLabel("Sites in Band 1")).toMatchObject({ value: 8, context: "of 14 sites, risk R of 0.60 or more" });
     expect(byLabel("Open alerts")).toMatchObject({ value: 9, context: "1 Critical · 2 High · 4 Medium · 2 Info" });
     expect(byLabel("Claims to validate").value).toBe(7);
-    expect(byLabel("Plants off-track").value).toBe(3);
+    expect(byLabel("Plants off-track")).toMatchObject({ value: 3, context: "Critical or High alert, a tier drop, or benefit under 80% of pro-rated target" });
   });
 
   it("supplier role: the same strip, scoped to the three Coromandel factories", () => {

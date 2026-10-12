@@ -35,7 +35,7 @@ export function portfolioKpis(p: Portfolio, role: Role): KpiData[] {
       context: `${p.alerts.Critical} Critical · ${p.alerts.High} High · ${p.alerts.Medium} Medium · ${p.alerts.Info} Info`,
     },
     { label: "Claims to validate", value: p.claimsAwaitingValidation, context: "Pending validation or Flagged" },
-    { label: "Plants off-track", value: p.offTrackCount, context: "Critical or High alert, or a tier drop" },
+    { label: "Plants off-track", value: p.offTrackCount, context: "Critical or High alert, a tier drop, or benefit under 80% of pro-rated target" },
   ];
 }
 

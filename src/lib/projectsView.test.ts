@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cellScores, removals } from "@/src/data/cells";
+import { removals } from "@/src/data/cells";
+import { delivered } from "@/src/data/delivered";
 import { f12Example } from "@/src/data/f12Example";
 import { factories } from "@/src/data/factories";
 import { opportunities } from "@/src/data/opportunities";
@@ -12,18 +13,18 @@ import { evaluateScenario } from "./scenarios";
 import { getSites } from "./selectors";
 import { scopeFor } from "./scope";
 
-const site = () => buildFactoryPwi(factories.find((f) => f.id === "F12")!, cellScores.find((c) => c.factoryId === "F12")!, removals.find((r) => r.factoryId === "F12")!, f12Example);
+const site = () => buildFactoryPwi(factories.find((f) => f.id === "F12")!, delivered.find((d) => d.factoryId === "F12"), removals.find((r) => r.factoryId === "F12")!, f12Example);
 const run = (items: string[]) => evaluateScenario(site(), 110000, items);
 const items = (id: string) => scenarios.find((s) => s.id === id)!.items;
 
 describe("Phase E: catalogue cards", () => {
   const ranked = rankOpportunities(opportunities);
   const cards = ranked.map(catalogueCard);
-  it("orders C, D, B, E, A, F, then ineligible G", () => {
-    expect(cards.map((c) => c.id)).toEqual(["OPP-C", "OPP-D", "OPP-B", "OPP-E", "OPP-A", "OPP-F", "OPP-G"]);
+  it("orders C, D, B, E, A, F, H, then ineligible G", () => {
+    expect(cards.map((c) => c.id)).toEqual(["OPP-C", "OPP-D", "OPP-B", "OPP-E", "OPP-A", "OPP-F", "OPP-H", "OPP-G"]);
   });
   it("OPP-G is ineligible and names the failed gates", () => {
-    const g = cards[6];
+    const g = cards[7];
     expect(g.eligible).toBe(false);
     expect(g.weighted).toBeCloseTo(4.45, 10);
     expect(g.failedGates.map((x) => x.label)).toEqual(["Hydrologically connected", "Collective-action eligibility"]);

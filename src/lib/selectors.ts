@@ -1,14 +1,16 @@
-import { cellScores, removals } from "@/src/data/cells";
+import { removals } from "@/src/data/cells";
+import { delivered } from "@/src/data/delivered";
 import { f12Example } from "@/src/data/f12Example";
 import { factories } from "@/src/data/factories";
 import { ops } from "@/src/data/ops";
+import { MONTHS_ELAPSED } from "@/src/data/tenants";
 import { projects } from "@/src/data/projects";
 import { riskScores } from "@/src/data/risks";
 import { suppliers } from "@/src/data/suppliers";
 import type { FactoryRecord, OpsRecord, SupplierRecord } from "@/src/data/types";
 import { awaitingValidation, readinessShare } from "./claims";
-import { alertCounts, buildAlerts, healthBand, highestSeverity, isOffTrack, tierDirection, type Alert } from "./ops";
-import { buildFactoryPwi, type FactoryPwi } from "./pwi";
+import { alertCounts, buildAlerts, healthBand, highestSeverity, isOffTrack, resolveOpsRow, tierDirection, type Alert } from "./ops";
+import { buildFactoryPwi, proRatedBenefitShare, type FactoryPwi } from "./pwi";
 import { rankRanges, rankSites, type RankInput, type RankRange } from "./rank";
 import { rollup, type Rollup } from "./rollup";
 import {
@@ -34,22 +36,24 @@ function buildStatic(): StaticSite[] {
     const scores = riskRecord.scores;
     const gaps = riskRecord.gaps ?? {};
     const policy = riskPillarsPolicy(scores, gaps);
-    const opsRow = ops.find((o) => o.factoryId === record.id)!;
+    const pwi = buildFactoryPwi(
+      record,
+      delivered.find((d) => d.factoryId === record.id),
+      removals.find((r) => r.factoryId === record.id)!,
+      record.id === f12Example.factoryId ? f12Example : null,
+    );
+    const benefit = proRatedBenefitShare(pwi, MONTHS_ELAPSED);
+    const opsRow = resolveOpsRow(ops.find((o) => o.factoryId === record.id)!, benefit);
     const risks = evaluateRisks(record.id, scores, gaps);
     return {
       record,
       supplierName: suppliers.find((s) => s.id === record.supplierId)!.name,
       pillars: policy.pillars, missingPillars: policy.missingPillars, coverage: policy.coverage, risks, riskCounts: riskCounts(risks), bwsRise: bwsRise(scores),
-      pwi: buildFactoryPwi(
-        record,
-        cellScores.find((c) => c.factoryId === record.id)!,
-        removals.find((r) => r.factoryId === record.id)!,
-        record.id === f12Example.factoryId ? f12Example : null,
-      ),
+      pwi,
       ops: opsRow,
       health: healthBand(opsRow.healthScore),
       tierDirection: opsRow.tierChange ? tierDirection(opsRow.tierChange.from, opsRow.tierChange.to) : null,
-      offTrack: isOffTrack(opsRow),
+      offTrack: isOffTrack(opsRow, benefit.availability),
     };
   });
 }
@@ -158,7 +162,7 @@ export const getSupplier = (scope: Scope, id: SupplierId, weights?: Weights): Su
   getSuppliers(scope, weights).find((s) => s.id === id);
 
 /** Open alerts for plants in scope. */
-export const getAlerts = (scope: Scope): Alert[] => buildAlerts(ops.filter((o) => canSeeFactory(scope, o.factoryId)));
+export const getAlerts = (scope: Scope): Alert[] => buildAlerts(STATIC.filter((s) => canSeeFactory(scope, s.record.id)).map((s) => s.ops));
 
 export interface Portfolio {
   supplierCount: number; factoryCount: number;

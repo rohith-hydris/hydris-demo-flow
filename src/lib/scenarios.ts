@@ -1,7 +1,7 @@
 import { opportunities, type ForecastBenefit, type Opportunity } from "@/src/data/opportunities";
 import { RS_PER_LAKH, WATER_VALUE_RS_PER_M3 } from "@/src/data/scenarios";
 import type { Measure } from "@/src/data/types";
-import { PILLARS, pillarScore, sitePwi, type FactoryPwi, type PwiCell } from "./pwi";
+import { PILLARS, p1Quality, pillarScore, sitePwi, volumetricBalance, type FactoryPwi, type PwiCell } from "./pwi";
 import type { Dimension, Pillar } from "./types";
 
 // V2 Section 12: a bounded scenario calculator (no optimiser). Forecast benefit is added to the site grid as Forecast only,
@@ -31,12 +31,14 @@ export interface ScenarioResult {
 type Kg = { tss: number; tn: number; tp: number };
 const ZERO_KG: Kg = { tss: 0, tn: 0, tp: 0 };
 
-interface Increment { m3: number; people: number; kg: Kg }
-const emptyInc = (): Increment => ({ m3: 0, people: 0, kg: { ...ZERO_KG } });
+/** `removal` is added percentage points of ETP removal (P1 Quality); `kg` is added mass (P2 and P3 Quality). */
+interface Increment { m3: number; people: number; kg: Kg; removal: Kg }
+const emptyInc = (): Increment => ({ m3: 0, people: 0, kg: { ...ZERO_KG }, removal: { ...ZERO_KG } });
 
 function addForecast(inc: Increment, f: ForecastBenefit, k: number) {
   if (f.unit === "m3") inc.m3 += f.value * k;
   else if (f.unit === "people") inc.people += f.value * k;
+  else if (f.unit === "removal") { inc.removal.tss += f.tss * k; inc.removal.tn += f.tn * k; inc.removal.tp += f.tp * k; }
   else { inc.kg.tss += f.tss * k; inc.kg.tn += f.tn * k; inc.kg.tp += f.tp * k; }
 }
 
@@ -51,6 +53,11 @@ function forecastScore(cell: PwiCell, inc: Increment | undefined): number {
   if (cell.dimension === "Quality" && t.kind === "mass" && d.kind === "mass") {
     const parts = [Math.min(1, (d.tss + inc.kg.tss) / t.tss), Math.min(1, (d.tn + inc.kg.tn) / t.tn), Math.min(1, (d.tp + inc.kg.tp) / t.tp)];
     return parts.reduce((a, b) => a + b, 0) / 3;
+  }
+  if (cell.dimension === "Quality" && t.kind === "removal" && d.kind === "removal") {
+    // Added points of removal, capped at 100%. p1Quality averages the per-pollutant scores, so TSS cannot hide TN.
+    const added = (key: "tss" | "tn" | "tp") => Math.min(100, d[key] + inc.removal[key]);
+    return p1Quality({ tss: added("tss"), tn: added("tn"), tp: added("tp") });
   }
   return cell.score;
 }
@@ -110,11 +117,13 @@ export function evaluateScenario(site: FactoryPwi, replenishmentNeededM3: number
   const total = emptyInc();
   for (const inc of central.values()) { total.m3 += inc.m3; total.people += inc.people; total.kg.tss += inc.kg.tss; total.kg.tn += inc.kg.tn; total.kg.tp += inc.kg.tp; }
 
-  const baseBalance = baseB / replenishmentNeededM3;
-  const balance = (baseB + addedB(central)) / replenishmentNeededM3;
+  // The same function as the site balance, so a scenario with nothing added equals the site's central balance.
+  const balanceWith = (added: number) => volumetricBalance(baseB + added, 0, 0, replenishmentNeededM3);
+  const baseBalance = balanceWith(0);
+  const balance = balanceWith(addedB(central));
   return {
     itemIds: chosen.map((o) => o.id), pwi: c.pwi, pwiLow: l.pwi, pillars: c.pillars,
-    volumetricBalance: balance, volumetricBalanceLow: (baseB + addedB(low)) / replenishmentNeededM3,
+    volumetricBalance: balance, volumetricBalanceLow: balanceWith(addedB(low)),
     capexLakh, omLakh, grossSavingsLakh, savingsLakh, netSavingsLakh, payback, overlapM3, overlapSavingLakh,
     stewardship: {
       pwiChangePoints: (c.pwi - site.sitePwiCentral) * 100, balanceChangePoints: (balance - baseBalance) * 100,

@@ -57,7 +57,9 @@ export const GATE_LABELS: Record<keyof Gates, string> = {
 export type ForecastBenefit =
   | { unit: "m3"; value: number }
   | { unit: "people"; value: number }
-  | { unit: "kg"; tss: number; tn: number; tp: number };
+  | { unit: "kg"; tss: number; tn: number; tp: number }
+  /** Added percentage points of pollutant removal at the ETP (P1 Quality), capped at 100% removal when scored. */
+  | { unit: "removal"; tss: number; tn: number; tp: number };
 
 export type OpportunityType = "Nature-based" | "Effluent treatment" | "Community / access" | "Reuse / efficiency";
 
@@ -100,6 +102,9 @@ export const opportunities: Opportunity[] = [
   { id: "OPP-F", factoryId: "F12", name: "Sub-basin recharge expansion", type: "Nature-based", pillar: "P2", dimension: "Availability",
     forecast: { unit: "m3", value: 5000 }, uncertainty: 0.3, capexLakh: 28, omLakh: 1, savingsLakh: 0, timingMonths: 7, scores: [3, 4, 4, 3, 3], gates: ALL_PASS,
     measurementNeeds: "Quarterly pit inspection and rainfall log" },
+  { id: "OPP-H", factoryId: "F12", name: "ETP nitrogen upgrade", type: "Effluent treatment", pillar: "P1", dimension: "Quality",
+    forecast: { unit: "removal", tss: 0, tn: 10, tp: 0 }, uncertainty: 0.3, capexLakh: 60, omLakh: 3.5, savingsLakh: 0, timingMonths: 9, scores: [3, 3, 4, 5, 2], gates: ALL_PASS,
+    measurementNeeds: "Weekly outlet TN lab results with the matched ETP flow log" },
   // V2 Section 11: scores well, but fails a mandatory gate, so it is listed after every eligible opportunity.
   { id: "OPP-G", factoryId: "F04", name: "Cauvery bank planting", type: "Nature-based", pillar: "P3", dimension: "Availability",
     forecast: { unit: "m3", value: 9000 }, uncertainty: 0.3, capexLakh: 22, omLakh: 1, savingsLakh: 0, timingMonths: 10, scores: [5, 4, 4, 4, 5],

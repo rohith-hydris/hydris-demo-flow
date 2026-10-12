@@ -69,6 +69,21 @@ function cellAmount(cell: PwiCell["delivered"]): Amount | null {
   return r;
 }
 
+/**
+ * A forecast as an amount. Added removal points become kg of pollutant only where the demo records baseline loads (F12);
+ * elsewhere they carry no kg, because points of removal cannot be turned into mass without a load.
+ */
+function forecastAmount(o: Opportunity, factoryId: FactoryId): Amount {
+  const f = o.forecast;
+  if (f.unit !== "removal") return scaleAmount(f.unit === "kg" ? { unit: "kg", tss: f.tss, tn: f.tn, tp: f.tp } : f, 1);
+  const r = zero();
+  if (factoryId === f12Example.factoryId) {
+    const l = f12Example.baselineLoadsKg;
+    r.kg = { tss: (l.tss * f.tss) / 100, tn: (l.tn * f.tn) / 100, tp: (l.tp * f.tp) / 100 };
+  }
+  return r;
+}
+
 const fmtAmount = (dim: ImpactDimension, a: Amount) =>
   dim === "Quantity" ? `${fmtInt(a.m3)} m³` : dim === "Access" ? `${fmtInt(a.people)} people`
     : `${fmtInt(a.kg.tss)} / ${fmtInt(a.kg.tn)} / ${fmtInt(a.kg.tp)} kg (TSS / TN / TP)`;
@@ -153,7 +168,7 @@ function factoryOutcomes(site: Site, baseline: ApprovedBaseline): { rows: Outcom
 
   // Forecast: opportunities in the approved scenario. Never added to Measured or Validated.
   for (const o of forecastOpps(site.id, baseline)) {
-    const a = scaleAmount(o.forecast.unit === "kg" ? { unit: "kg", tss: o.forecast.tss, tn: o.forecast.tn, tp: o.forecast.tp } : o.forecast, 1);
+    const a = forecastAmount(o, site.id);
     const dim = DIMENSION_OF[o.dimension];
     add(o.pillar, dim, "Forecast", a, {
       outcome: o.name, stateNote: "Demo estimate", project: null, method: o.type, period: `${o.timingMonths} months to deliver`,

@@ -1,5 +1,5 @@
 import { cellStateOverrides } from "@/src/data/cells";
-import type { CellScoreRecord, FactoryRecord, Measure, RemovalRecord, WorkedExample } from "@/src/data/types";
+import type { DeliveredRecord, FactoryRecord, Measure, RemovalRecord, WorkedExample } from "@/src/data/types";
 import type { CellGrade, CellState, StatusBand, Dimension, EvidenceGrade, FactoryId, Pillar, TargetState } from "./types";
 
 // PRODUCT 6.1 to 6.7 and 5.9: the PWI Engine and Impact Module (Module 03). Pure functions, full precision.
@@ -66,6 +66,17 @@ export function cellScore(delivered: number, target: number, targetState: Target
   return { score: null, rollup: 0, excluded: false, flagged: true, needsEvidence: false, proposed: false, label: "Missing input" };
 }
 
+/** Score of a delivered measure against its target: min(1, B / T) per cell, per pollutant for mass, averaged. 0 for a missing measure. */
+export function measureScore(target: Measure, delivered: Measure): number {
+  if (target.kind === "volume" && delivered.kind === "volume") return cellScore(delivered.m3, target.m3).rollup ?? 0;
+  if (target.kind === "people" && delivered.kind === "people") return cellScore(delivered.count, target.count).rollup ?? 0;
+  if (target.kind === "mass" && delivered.kind === "mass") {
+    const parts = (["tss", "tn", "tp"] as const).map((k) => cellScore(delivered[k], target[k]).rollup ?? 0);
+    return parts.reduce((a, b) => a + b, 0) / 3;
+  }
+  return 0;
+}
+
 /** S(Q,1) = mean over TSS, TN and TP of min(1, removal / 0.90). Averaged by score so TSS cannot hide poor nitrogen removal. */
 export function p1Quality(removalPct: { tss: number; tn: number; tp: number }): number {
   const parts = [removalPct.tss, removalPct.tn, removalPct.tp].map((r) => Math.min(1, r / 100 / REMOVAL_TARGET));
@@ -85,8 +96,12 @@ export function pillarScore(availability: number | null, accessibility: number |
 /** Site PWI as a 0 to 1 value; display as a percentage. */
 export const sitePwi = (p1: number, p2: number, p3: number) => (p1 + p2 + p3) / 3;
 
-/** (B_A1 + B_A2 + B_A3) / RN, equal to 0.2 S_A1 + 0.4 S_A2 + 0.4 S_A3. Over 1 means more returned than consumed. */
-export const volumetricBalance = (sA1: number, sA2: number, sA3: number) => 0.2 * sA1 + 0.4 * sA2 + 0.4 * sA3;
+/**
+ * PRODUCT 6.4: (B_A1 + B_A2 + B_A3) / RN, from delivered m3 and RN in m3. Deliberately uncapped: unlike a cell score, a
+ * balance above 1 means more water was returned than consumed. 0 when RN is 0.
+ */
+export const volumetricBalance = (deliveredA1: number, deliveredA2: number, deliveredA3: number, rnM3: number) =>
+  rnM3 > 0 ? (deliveredA1 + deliveredA2 + deliveredA3) / rnM3 : 0;
 
 /** RN = a x (freshwater withdrawal - compliant same-basin discharge). */
 export const replenishmentNeeded = (withdrawalM3: number, basinDischargeM3: number, share = 1) =>
@@ -143,6 +158,49 @@ export function gapText(pillar: Pillar, dimension: Dimension, state: CellState, 
   return GAP_TEXT[pillar][dimension];
 }
 
+/** Below this share of the pro-rated target a benefit is "behind target" (PRODUCT 6.9). */
+export const BEHIND_TARGET_SHARE = 0.8;
+
+export interface ProRatedBenefit {
+  /** Delivered Availability m3 over the pro-rated target, RN x months / 12. The figure used for the off-track test. */
+  availability: number;
+  /** Delivered Quality kg over the pro-rated kg target, pooled over cells that have kg; null when no cell has kg. Informational. */
+  quality: number | null;
+  /** Each cell's share of its target: volume and kg pro-rated, people not pro-rated, score-only Quality cells use their score. */
+  cells: { pillar: Pillar; dimension: Dimension; share: number }[];
+}
+
+/**
+ * Benefit against the pro-rated target after `monthsElapsed` of 12 (PRODUCT 6.9). Availability volumes and Quality kg are
+ * pro-rated the same way; people targets are not, because headcount served does not accrue over the year.
+ * The Availability targets sum to RN, so the denominator is RN x months / 12.
+ */
+export function proRatedBenefitShare(site: FactoryPwi, monthsElapsed: number): ProRatedBenefit {
+  const k = monthsElapsed / 12;
+  let delivered = 0, target = 0, kgDelivered = 0, kgTarget = 0;
+  const cells: ProRatedBenefit["cells"] = [];
+  for (const c of site.cells) {
+    const t = c.target, d = c.delivered;
+    let share = c.score;
+    if (c.dimension === "Availability" && t?.kind === "volume" && d?.kind === "volume") {
+      delivered += d.m3; target += t.m3;
+      share = t.m3 > 0 ? d.m3 / (t.m3 * k) : 1;
+    } else if (c.dimension === "Accessibility" && t?.kind === "people" && d?.kind === "people") {
+      share = t.count > 0 ? d.count / t.count : 1;
+    } else if (c.dimension === "Quality" && t?.kind === "mass" && d?.kind === "mass") {
+      const tk = t.tss + t.tn + t.tp, dk = d.tss + d.tn + d.tp;
+      kgDelivered += dk; kgTarget += tk;
+      share = tk > 0 ? dk / (tk * k) : 1;
+    }
+    cells.push({ pillar: c.pillar, dimension: c.dimension, share });
+  }
+  return {
+    availability: target > 0 ? delivered / (target * k) : 1,
+    quality: kgTarget > 0 ? kgDelivered / (kgTarget * k) : null,
+    cells,
+  };
+}
+
 export interface PwiCell {
   pillar: Pillar; dimension: Dimension;
   /** Central cell score S, 0 to 1. */
@@ -156,6 +214,8 @@ export interface PwiCell {
   targetState: TargetState;
   grade: CellGrade;
   target: Measure | null; delivered: Measure | null;
+  /** Availability cells only: delivered m3, kept apart from the capped score so over-delivery survives. Null on other cells. */
+  deliveredM3: number | null;
   breakdown: { label: string; value: number; unit: "m3" | "people" | "kg" }[];
   /** What is needed to reach 1.0, or null when the cell is full. */
   gap: string | null;
@@ -189,7 +249,7 @@ function deriveState(factoryId: FactoryId, pillar: Pillar, dimension: Dimension,
 }
 
 export function buildFactoryPwi(
-  factory: FactoryRecord, scores: CellScoreRecord, removal: RemovalRecord, worked: WorkedExample | null,
+  factory: FactoryRecord, delivered: DeliveredRecord | undefined, removal: RemovalRecord, worked: WorkedExample | null,
 ): FactoryPwi {
   const targets = cellTargets(factory.replenishmentNeededM3, factory.headcount, factory.householdSize);
   const p1q = p1Quality(removal);
@@ -197,26 +257,29 @@ export function buildFactoryPwi(
 
   for (const pillar of PILLARS) {
     for (const dimension of DIMENSIONS) {
-      const score =
-        dimension === "Quality"
-          ? (pillar === "P1" ? p1q : scores.quality[pillar])
-          : scores[dimension === "Availability" ? "availability" : "accessibility"][pillar];
       const w = worked?.cells.find((c) => c.pillar === pillar && c.dimension === dimension);
+      if (!w && !delivered) throw new Error(`No delivered record or worked example for ${factory.id}`);
 
       let target: Measure | null = null;
-      let delivered: Measure | null = null;
+      let got: Measure | null = null;
       if (w) {
-        target = w.target; delivered = w.delivered;
+        target = w.target; got = w.delivered;
       } else if (dimension === "Availability") {
         target = { kind: "volume", m3: targets.availability[pillar] };
-        delivered = { kind: "volume", m3: score * targets.availability[pillar] };
+        got = { kind: "volume", m3: delivered!.availabilityM3[pillar] };
       } else if (dimension === "Accessibility") {
         target = { kind: "people", count: targets.accessibility[pillar] };
-        delivered = { kind: "people", count: score * targets.accessibility[pillar] };
+        got = { kind: "people", count: delivered!.accessibilityPeople[pillar] };
       } else if (pillar === "P1") {
         target = { kind: "removal", tss: REMOVAL_TARGET * 100, tn: REMOVAL_TARGET * 100, tp: REMOVAL_TARGET * 100 };
-        delivered = { kind: "removal", tss: removal.tss, tn: removal.tn, tp: removal.tp };
+        got = { kind: "removal", tss: removal.tss, tn: removal.tn, tp: removal.tp };
       }
+
+      // Every cell score is computed: min(1, delivered / target); P1 Quality from removal; the entered score where no kg data exists.
+      const score =
+        dimension === "Quality" && pillar === "P1" ? p1q
+        : target && got && target.kind !== "removal" ? measureScore(target, got)
+        : delivered!.qualityScore[pillar as "P2" | "P3"];
 
       const derived = deriveState(factory.id, pillar, dimension, score);
       const state = w ? w.state : derived.state;
@@ -224,7 +287,7 @@ export function buildFactoryPwi(
       cells.push({
         pillar, dimension, score, low: lowValue(score, grade), counted: countedValue(score, grade), state, targetState: "Defined",
         stateNote: w ? (w.stateNote ?? null) : derived.note,
-        grade, target, delivered, breakdown: w?.breakdown ?? [],
+        grade, target, delivered: got, deliveredM3: dimension === "Availability" && got?.kind === "volume" ? got.m3 : null, breakdown: w?.breakdown ?? [],
         gap: gapText(pillar, dimension, state, score),
       });
     }
@@ -233,6 +296,14 @@ export function buildFactoryPwi(
   const get = (p: Pillar, d: Dimension, key: "score" | "low" | "counted") => cells.find((c) => c.pillar === p && c.dimension === d)![key];
   const pillarsBy = (key: "score" | "low" | "counted") =>
     Object.fromEntries(PILLARS.map((p) => [p, pillarScore(get(p, "Availability", key), get(p, "Accessibility", key), get(p, "Quality", key))])) as Record<Pillar, number>;
+  // Uncapped: sums delivered m3 (not capped scores) over RN. Counted applies the evidence grade rule to each cell's delivered volume.
+  const balanceOf = (counted: boolean) => {
+    const m3 = (p: Pillar) => {
+      const c = cells.find((x) => x.pillar === p && x.dimension === "Availability")!;
+      return counted ? countedValue(c.deliveredM3 ?? 0, c.grade) : (c.deliveredM3 ?? 0);
+    };
+    return volumetricBalance(m3("P1"), m3("P2"), m3("P3"), factory.replenishmentNeededM3);
+  };
   const pillars = pillarsBy("counted");
   const pillarsCentral = pillarsBy("score");
   const pillarsLow = pillarsBy("low");
@@ -249,8 +320,7 @@ export function buildFactoryPwi(
   return {
     factoryId: factory.id, cells, pillars, pillarsCentral, pillarsLow, sitePwi: pwi, sitePwiCentral: pwiCentral,
     sitePwiLow: sitePwi(pillarsLow.P1, pillarsLow.P2, pillarsLow.P3),
-    volumetricBalance: volumetricBalance(get("P1", "Availability", "counted"), get("P2", "Availability", "counted"), get("P3", "Availability", "counted")),
-    volumetricBalanceCentral: volumetricBalance(get("P1", "Availability", "score"), get("P2", "Availability", "score"), get("P3", "Availability", "score")),
+    volumetricBalance: balanceOf(true), volumetricBalanceCentral: balanceOf(false),
     confidence: factory.confidence, statusBand: internalStatusBand(pwi, factory.confidence),
     evidenceGrade: factory.evidenceGrade, guide,
   };

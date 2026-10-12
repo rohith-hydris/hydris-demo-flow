@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { cellScores, removals } from "@/src/data/cells";
+import { removals } from "@/src/data/cells";
+import { delivered } from "@/src/data/delivered";
 import { factories } from "@/src/data/factories";
 import { f12Example } from "@/src/data/f12Example";
-import { liteFindings } from "@/src/data/opportunities";
+import { liteFindings, opportunities } from "@/src/data/opportunities";
 import { outputs } from "@/src/data/affected";
 import { projects } from "@/src/data/projects";
 import { riskScores } from "@/src/data/risks";
@@ -22,7 +23,7 @@ import { scopeFor } from "./scope";
 import type { RiskScores } from "@/src/data/types";
 import type { ReviewStates } from "./types";
 
-const f12 = () => buildFactoryPwi(factories.find((f) => f.id === "F12")!, cellScores.find((c) => c.factoryId === "F12")!, removals.find((r) => r.factoryId === "F12")!, f12Example);
+const f12 = () => buildFactoryPwi(factories.find((f) => f.id === "F12")!, delivered.find((d) => d.factoryId === "F12"), removals.find((r) => r.factoryId === "F12")!, f12Example);
 const RN = 110000;
 const scen = (id: string) => evaluateScenario(f12(), RN, scenarios.find((s) => s.id === id)!.items);
 const pct = (x: number) => Math.round(x * 1000) / 10;
@@ -147,12 +148,12 @@ describe("V2 10: Lite import", () => {
 
 describe("V2 11: catalogue", () => {
   it("weighted scores reproduce", () => {
-    const want: Record<string, number> = { "OPP-C": 3.85, "OPP-D": 3.8, "OPP-B": 3.6, "OPP-E": 3.5, "OPP-A": 3.45, "OPP-F": 3.4, "OPP-G": 4.45 };
+    const want: Record<string, number> = { "OPP-C": 3.85, "OPP-D": 3.8, "OPP-B": 3.6, "OPP-E": 3.5, "OPP-A": 3.45, "OPP-F": 3.4, "OPP-H": 3.3, "OPP-G": 4.45 };
     for (const r of rankOpportunities()) expect(Math.round(r.weighted * 100) / 100).toBe(want[r.opportunity.id]);
   });
-  it("gates come first: OPP-G (4.45) is listed after OPP-F (3.40)", () => {
+  it("gates come first: OPP-G (4.45) is listed after OPP-H (3.30)", () => {
     const order = rankOpportunities().map((r) => r.opportunity.id);
-    expect(order).toEqual(["OPP-C", "OPP-D", "OPP-B", "OPP-E", "OPP-A", "OPP-F", "OPP-G"]);
+    expect(order).toEqual(["OPP-C", "OPP-D", "OPP-B", "OPP-E", "OPP-A", "OPP-F", "OPP-H", "OPP-G"]);
     const g = rankOpportunities().find((r) => r.opportunity.id === "OPP-G")!;
     expect(g.eligible).toBe(false);
     expect(g.failed.map((x) => `${x.key}:${x.result}`)).toEqual(["hydrologicallyConnected:Fail", "collectiveAction:Unknown"]);
@@ -166,6 +167,45 @@ describe("V2 12: scenarios", () => {
     expect(pct(s.pwi)).toBe(69.8);
     expect(pct(s.volumetricBalance)).toBe(73.6);
     expect(s.payback).toEqual({ kind: "n/a" });
+  });
+  it("S0 balance equals the site's central balance exactly, for every site with no project added", () => {
+    for (const f of factories) {
+      const site = buildFactoryPwi(f, delivered.find((d) => d.factoryId === f.id), removals.find((r) => r.factoryId === f.id)!, f.id === "F12" ? f12Example : null);
+      expect(evaluateScenario(site, f.replenishmentNeededM3, []).volumetricBalance).toBeCloseTo(site.volumetricBalanceCentral, 12);
+    }
+  });
+  it("A5: an ETP nitrogen upgrade moves P1 Quality (TN 75 to 85 points raises it from 0.907 to 0.944)", () => {
+    // P1 Quality is the mean of per-pollutant scores min(1, removal / 90): TSS 1, TN 85/90, TP 80/90 = 0.9444.
+    // (The issue text gives 0.963, which is what TN at 90% would score: (1 + 1 + 0.889) / 3.)
+    const site = f12();
+    const q = (r: ReturnType<typeof evaluateScenario>) => r.pillars.P1;
+    const before = site.cells.find((c) => c.pillar === "P1" && c.dimension === "Quality")!.score;
+    expect(before).toBeCloseTo(0.9074, 3);
+    const r = evaluateScenario(site, RN, ["OPP-H"]);
+    const base = evaluateScenario(site, RN, []);
+    // P1 = 0.4 A + 0.3 W + 0.3 Q, so a Quality gain of g lifts P1 by 0.3 g
+    expect(q(r) - q(base)).toBeCloseTo(0.3 * ((1 + 85 / 90 + 80 / 90) / 3 - before), 9);
+    expect((1 + 85 / 90 + 80 / 90) / 3).toBeCloseTo(0.9444, 4);
+    expect(r.pwi).toBeGreaterThan(base.pwi);
+  });
+  it("A5: the low value applies the uncertainty to the added points (+7 not +10 at 30%) and removal is capped at 100%", () => {
+    const site = f12();
+    const base = evaluateScenario(site, RN, []);
+    const r = evaluateScenario(site, RN, ["OPP-H"]);
+    expect(r.pwiLow).toBeGreaterThan(base.pwi);
+    expect(r.pwiLow).toBeLessThan(r.pwi);
+    const lowQ = (1 + 82 / 90 + 80 / 90) / 3;
+    expect(r.pwiLow - base.pwi).toBeCloseTo(0.3 * (lowQ - site.cells.find((c) => c.pillar === "P1" && c.dimension === "Quality")!.score) / 3, 9);
+    const huge = evaluateScenario(site, RN, ["OPP-H"], [{ ...opportunities.find((o) => o.id === "OPP-H")!, forecast: { unit: "removal", tss: 50, tn: 50, tp: 50 } }]);
+    expect(huge.pillars.P1).toBeCloseTo(0.4 * site.cells.find((c) => c.pillar === "P1" && c.dimension === "Availability")!.score + 0.3 + 0.3, 9); // every pollutant at 100% removal scores 1
+  });
+  it("A5: a scenario with no removal project is unchanged", () => {
+    for (const id of ["S0", "S1", "S2", "S3"]) {
+      const withH = scen(id), without = evaluateScenario(f12(), RN, scenarios.find((s) => s.id === id)!.items.filter((i) => i !== "OPP-H"));
+      expect(withH.pwi).toBe(without.pwi);
+      expect(withH.pillars.P1).toBe(without.pillars.P1);
+    }
+    expect(pct(scen("S1").pwi)).toBe(81.6);
   });
   it("S1 Basin first", () => {
     const s = scen("S1");

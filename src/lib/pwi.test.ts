@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cellScores, removals } from "@/src/data/cells";
+import { removals } from "@/src/data/cells";
+import { delivered } from "@/src/data/delivered";
 import { f12Example } from "@/src/data/f12Example";
 import { factories } from "@/src/data/factories";
 import { pct1, round } from "./format";
@@ -11,7 +12,7 @@ import { siteChecks } from "./specCheckValues";
 
 const pwiOf = (id: string) =>
   buildFactoryPwi(
-    factories.find((f) => f.id === id)!, cellScores.find((c) => c.factoryId === id)!, removals.find((r) => r.factoryId === id)!,
+    factories.find((f) => f.id === id)!, delivered.find((d) => d.factoryId === id), removals.find((r) => r.factoryId === id)!,
     id === "F12" ? f12Example : null,
   );
 
@@ -44,7 +45,7 @@ describe("formulas (PRODUCT 6.1 to 6.5)", () => {
   });
 
   it("every cell carries a defined target state", () => {
-    for (const c of buildFactoryPwi(factories[11], cellScores[11], removals[11], f12Example).cells) expect(c.targetState).toBe("Defined");
+    for (const c of buildFactoryPwi(factories[11], undefined, removals[11], f12Example).cells) expect(c.targetState).toBe("Defined");
   });
 
   it("P1 Quality averages per-pollutant scores: F12 is 0.907, so TN cannot be hidden by TSS", () => {
@@ -60,9 +61,11 @@ describe("formulas (PRODUCT 6.1 to 6.5)", () => {
     expect(sitePwi(1, 0.5, 0)).toBeCloseTo(0.5, 12);
   });
 
-  it("volumetric balance = 0.2 S_A1 + 0.4 S_A2 + 0.4 S_A3", () => {
-    expect(volumetricBalance(1, 0, 0)).toBeCloseTo(0.2, 12);
-    expect(volumetricBalance(0, 1, 1)).toBeCloseTo(0.8, 12);
+  it("volumetric balance = (B_A1 + B_A2 + B_A3) / RN, uncapped", () => {
+    expect(volumetricBalance(22000, 0, 0, 110000)).toBeCloseTo(0.2, 12);
+    expect(volumetricBalance(0, 44000, 44000, 110000)).toBeCloseTo(0.8, 12);
+    expect(volumetricBalance(50000, 60000, 40000, 110000)).toBeCloseTo(150000 / 110000, 12);
+    expect(volumetricBalance(1, 1, 1, 0)).toBe(0);
   });
 
   it("internal status band is checked in order", () => {
@@ -110,6 +113,20 @@ describe("evidence grade rule applied to counted values (PRODUCT 6.5)", () => {
     expect(p.statusBand).toBe("Not achieved");
   });
 
+  it("volumetric balance is uncapped: an over-delivering Availability cell takes it above 100% while its score stays at 1", () => {
+    // F12 with delivered volumes well above target (22,000 / 44,000 / 44,000 m3): 60,000 + 80,000 + 40,000 = 180,000 of RN 110,000.
+    const over = { ...f12Example, cells: f12Example.cells.map((c) => {
+      if (c.dimension !== "Availability" || c.delivered.kind !== "volume") return c;
+      const m3 = { P1: 60000, P2: 80000, P3: 40000 }[c.pillar];
+      return { ...c, delivered: { kind: "volume" as const, m3 } };
+    }) };
+    const f = factories.find((x) => x.id === "F12")!;
+    const q = buildFactoryPwi(f, delivered.find((d) => d.factoryId === "F12"), removals.find((r) => r.factoryId === "F12")!, over);
+    expect(q.volumetricBalanceCentral).toBeCloseTo(180000 / 110000, 12);
+    expect(q.volumetricBalanceCentral).toBeGreaterThan(1);
+    expect(q.cells.filter((c) => c.dimension === "Availability").every((c) => c.score <= 1)).toBe(true);
+  });
+
   it("grade A and B sites are unchanged: counted equals central", () => {
     for (const f of factories.filter((x) => (x.evidenceGrade === "A" || x.evidenceGrade === "B") && x.id !== "F12")) {
       const p = pwiOf(f.id);
@@ -141,7 +158,7 @@ describe("F12 worked example (PRODUCT 5.8, 6.6)", () => {
     // PWI below the PRD's 69.8%. This fixture sets that cell to B so the PRD worked example stays reproducible.
     const fixture = { ...f12Example, cells: f12Example.cells.map((c) => (c.grade === "C" ? { ...c, grade: "B" as const } : c)) };
     const f = factories.find((x) => x.id === "F12")!;
-    const q = buildFactoryPwi(f, cellScores.find((c) => c.factoryId === "F12")!, removals.find((r) => r.factoryId === "F12")!, fixture);
+    const q = buildFactoryPwi(f, delivered.find((d) => d.factoryId === "F12"), removals.find((r) => r.factoryId === "F12")!, fixture);
     expect(q.cells.every((c) => c.score === 0 || c.grade === "A" || c.grade === "B")).toBe(true);
     expect(pct1(q.sitePwi)).toBe(69.8);
     expect(pct1(q.volumetricBalance)).toBe(73.6);
@@ -271,5 +288,62 @@ describe("derived cells for the other sites (PRODUCT 5.9)", () => {
       expect(p.sitePwiLow).toBeLessThanOrEqual(p.sitePwi + 1e-12);
       for (const c of p.cells) expect(c.low).toBeLessThanOrEqual(c.score + 1e-12);
     }
+  });
+});
+
+// PRODUCT 5.4 entered cell scores, as they were before delivered amounts became the input (issue A4). F12 is the worked example.
+const ENTERED: Record<string, { a: number[]; w: number[]; q: number[] }> = {
+  F01: { a: [0.9, 0.7, 0.35], w: [1.0, 0.8, 0.45], q: [0.55, 0.1] }, F02: { a: [0.75, 0.45, 0.2], w: [0.9, 0.55, 0.3], q: [0.35, 0] },
+  F03: { a: [0.95, 0.85, 0.6], w: [1.0, 0.9, 0.7], q: [0.8, 0.45] }, F04: { a: [0.85, 0.6, 0.3], w: [1.0, 0.65, 0.35], q: [0.5, 0.15] },
+  F05: { a: [0.92, 0.8, 0.55], w: [1.0, 0.85, 0.6], q: [0.7, 0.4] }, F06: { a: [0.7, 0.4, 0.15], w: [0.85, 0.5, 0.2], q: [0.3, 0] },
+  F07: { a: [0.96, 0.88, 0.7], w: [1.0, 0.92, 0.75], q: [0.85, 0.55] }, F08: { a: [1.0, 0.95, 0.8], w: [1.0, 0.95, 0.85], q: [0.9, 0.7] },
+  F09: { a: [0.88, 0.65, 0.4], w: [1.0, 0.7, 0.4], q: [0.55, 0.2] }, F10: { a: [0.9, 0.75, 0.5], w: [1.0, 0.8, 0.55], q: [0.65, 0.3] },
+  F11: { a: [0.98, 0.9, 0.75], w: [1.0, 0.95, 0.8], q: [0.85, 0.6] }, F12: { a: [0.955, 0.795, 0.568], w: [1.0, 0.862, 0.517], q: [0.604, 0] },
+  F13: { a: [0.8, 0.55, 0.3], w: [0.95, 0.6, 0.3], q: [0.4, 0.05] }, F14: { a: [0.93, 0.78, 0.52], w: [1.0, 0.82, 0.58], q: [0.72, 0.35] },
+};
+
+describe("cell scores are computed from delivered amounts (issue A4)", () => {
+  const oldPwi = (id: string) => {
+    const e = ENTERED[id], rem = removals.find((r) => r.factoryId === id)!;
+    const p1q = p1Quality(rem);
+    return sitePwi(pillarScore(e.a[0], e.w[0], p1q), pillarScore(e.a[1], e.w[1], e.q[0]), pillarScore(e.a[2], e.w[2], e.q[1]));
+  };
+
+  it("all 14 site PWI values stay within 0.001 of the values from the entered scores", () => {
+    for (const f of factories) expect(Math.abs(pwiOf(f.id).sitePwiCentral - oldPwi(f.id))).toBeLessThan(0.001);
+  });
+
+  it("every Availability and Accessibility cell score is within 0.001 of PRODUCT 5.4, and is min(1, delivered / target)", () => {
+    for (const f of factories) {
+      const p = pwiOf(f.id), e = ENTERED[f.id];
+      (["P1", "P2", "P3"] as const).forEach((pl, i) => {
+        const a = p.cells.find((c) => c.pillar === pl && c.dimension === "Availability")!;
+        const w = p.cells.find((c) => c.pillar === pl && c.dimension === "Accessibility")!;
+        expect(Math.abs(a.score - e.a[i])).toBeLessThanOrEqual(0.001);
+        expect(Math.abs(w.score - e.w[i])).toBeLessThanOrEqual(0.001);
+        expect(a.score).toBeCloseTo(Math.min(1, a.deliveredM3! / (a.target as { m3: number }).m3), 12);
+        expect(w.score).toBeCloseTo(Math.min(1, (w.delivered as { count: number }).count / (w.target as { count: number }).count), 12);
+      });
+    }
+  });
+
+  it("changing headcount changes the targets but not the delivered amounts", () => {
+    const f = factories.find((x) => x.id === "F01")!;
+    const d = delivered.find((x) => x.factoryId === "F01")!;
+    const rem = removals.find((r) => r.factoryId === "F01")!;
+    const before = buildFactoryPwi(f, d, rem, null);
+    const after = buildFactoryPwi({ ...f, headcount: f.headcount * 2 }, d, rem, null);
+    const cell = (p: typeof before, pl: string, dim: string) => p.cells.find((c) => c.pillar === pl && c.dimension === dim)!;
+    for (const pl of ["P1", "P2", "P3"]) {
+      const b = cell(before, pl, "Accessibility"), a = cell(after, pl, "Accessibility");
+      expect((a.target as { count: number }).count).toBeCloseTo(2 * (b.target as { count: number }).count, 9);
+      expect(a.delivered).toEqual(b.delivered);
+      expect(cell(after, pl, "Availability").delivered).toEqual(cell(before, pl, "Availability").delivered);
+    }
+    expect(cell(after, "P2", "Accessibility").score).toBeCloseTo(cell(before, "P2", "Accessibility").score / 2, 12);
+  });
+
+  it("a site with neither a delivered record nor a worked example is an error, not a guess", () => {
+    expect(() => buildFactoryPwi(factories.find((x) => x.id === "F01")!, undefined, removals[0], null)).toThrow();
   });
 });
