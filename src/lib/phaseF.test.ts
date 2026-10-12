@@ -47,7 +47,7 @@ describe("Phase F: drawer facts", () => {
   });
   it("F12 counterfactual, operating period and monitoring come from V2 5.1", () => {
     expect(proj("PRJ-103")).toMatchObject({ counterfactual: "Pre-restoration inundated area and depth", operatingPeriod: "10 years from 1 Jan 2025", monitoringRequirement: "Annual satellite inundation and depth survey" });
-    expect(proj("PRJ-105").monitoringRequirement).toContain("62 days overdue");
+    expect(proj("PRJ-105").monitoringRequirement).toBe("Quarterly functionality check"); // the 62 days is computed from lastMonitoringCheck, not typed
   });
 });
 

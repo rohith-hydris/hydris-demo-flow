@@ -29,9 +29,9 @@ const scen = (id: string) => evaluateScenario(f12(), RN, scenarios.find((s) => s
 const pct = (x: number) => Math.round(x * 1000) / 10;
 
 describe("V2 2: five review states", () => {
-  it("the 21 projects keep their old summary status", () => {
-    expect(projects).toHaveLength(21);
-    expect(statusCounts()).toEqual({ Validated: 11, "Pending validation": 6, Flagged: 1, "Not counted": 3 });
+  it("the 22 projects keep their old summary status (the 21 plus PRJ-702)", () => {
+    expect(projects).toHaveLength(22);
+    expect(statusCounts()).toEqual({ Validated: 12, "Pending validation": 6, Flagged: 1, "Not counted": 3 });
   });
   it("named exceptions", () => {
     const by = (id: string) => projects.find((p) => p.id === id)!;
@@ -64,15 +64,15 @@ describe("V2 2: five review states", () => {
 
 describe("V2 4.2: missing data in R", () => {
   const scores = (id: string) => riskScores.find((r) => r.factoryId === id)!;
-  it("F10 coverage is 9 of 10 and R stays 0.55", () => {
+  it("F10 has a coastal flood reading of 0.0 (No Risk), so coverage is 10 of 10 and R stays 0.55", () => {
     const r = scores("F10");
     const p = riskPillarsPolicy(r.scores, r.gaps);
-    expect(p.coverage).toMatchObject({ available: 9, required: 10, share: 0.9 });
+    expect(p.coverage).toMatchObject({ available: 10, required: 10, share: 1 });
     expect(p.missingPillars).toEqual([]);
     expect(Math.round(riskR(p.pillars, DEFAULT_WEIGHTS) * 100) / 100).toBe(0.55);
     const site = getSites(scopeFor("brand")).find((s) => s.id === "F10")!;
     expect(site.R).toBeCloseTo(0.55, 2);
-    expect(site.riskCoverage.share).toBe(0.9);
+    expect(site.riskCoverage.share).toBe(1);
   });
   it("F11 coastal eutrophication Error changes neither R nor the counts", () => {
     const sites = getSites(scopeFor("brand"));
@@ -83,7 +83,8 @@ describe("V2 4.2: missing data in R", () => {
     expect(f11.R).toBeCloseTo(0.365, 3);
     expect(f11.riskCounts).toMatchObject({ present: 1, watch: 4 });
     expect(f11.risks.find((r) => r.code === "cep")!.status).toBe("Error");
-    expect(sites.find((s) => s.id === "F10")!.risks.find((r) => r.code === "cfr")!.status).toBe("No data");
+    const f10cfr = sites.find((s) => s.id === "F10")!.risks.find((r) => r.code === "cfr")!;
+    expect([f10cfr.status, f10cfr.rule]).toEqual(["Not present", "No Risk"]); // inland: coastal flood is a reading of No Risk, not missing data (issue C4)
   });
   it("a synthetic site with the whole groundwater pillar missing renormalises, records coverage and reports the R delta", () => {
     const base = scores("F01").scores as RiskScores;
@@ -307,5 +308,67 @@ describe("V2 14: replay", () => {
     expect(eventsOn(6).map((e) => e.factoryId)).toEqual(["F13"]);
     expect(eventsUpTo(6).map((e) => e.factoryId)).toEqual(["F13", "F02", "F06"]);
     expect(eventsUpTo(99).length).toBeGreaterThan(5);
+  });
+});
+
+// ---- C6: the mass-balance tolerance (issue C6) -------------------------------------------------------------------------------------
+
+import { f12BoundaryHighError } from "@/src/data/f12Balance";
+import { balanceGradeNote, balanceGradePenalty, computeBoundaryBalance, BALANCE_ERROR_NOTE } from "./boundary";
+import { gradeAfterBalance } from "./pwi";
+
+describe("mass-balance tolerance lowers the cell grades (issue C6)", () => {
+  // withdrawal 250,000 and the other terms fixed, so the error is set by the metered consumption
+  const errorOf = (share: number) => ({ ...f12BoundaryHighError, meteredConsumptionM3: 250000 - 150000 - 2000 - Math.round(share * 250000) });
+
+  it("balanceGradePenalty is 0 at 9.9% and 10.0%, and 1 at 10.1%, in either direction", () => {
+    expect([0.099, 0.1, 0.101].map(balanceGradePenalty)).toEqual([0, 0, 1]);
+    expect([-0.099, -0.1, -0.101].map(balanceGradePenalty)).toEqual([0, 0, 1]);
+    expect([0, 0.004, 0.5].map(balanceGradePenalty)).toEqual([0, 0, 1]);
+  });
+
+  it("the thresholds hold on real balances: errors of 24,750, 25,000 and 25,250 m3 on 250,000 m3 withdrawn", () => {
+    for (const [share, penalty] of [[0.099, 0], [0.1, 0], [0.101, 1]] as const) {
+      const b = computeBoundaryBalance(errorOf(share));
+      expect(b.errorM3).toBe(Math.round(share * 250000));
+      expect(b.errorShareOfWithdrawal).toBe(share);
+      expect(balanceGradePenalty(b.errorShareOfWithdrawal)).toBe(penalty);
+    }
+  });
+
+  it("F12's own balance error is 0.4%, so nothing is lowered and no note is shown", () => {
+    const b = boundaryBalance("F12")!;
+    expect(balanceGradePenalty(b.errorShareOfWithdrawal)).toBe(0);
+    expect(balanceGradeNote(b)).toBeNull();
+    const f12 = getSites(scopeFor("brand")).find((s) => s.id === "F12")!;
+    expect(f12.pwi.gradePenalty).toBe(0);
+    expect(f12.pwi.cells.find((c) => c.pillar === "P1" && c.dimension === "Availability")!.grade).toBe("B");
+  });
+
+  it("the second fixture has a 12% error and shows the note", () => {
+    const hi = computeBoundaryBalance(f12BoundaryHighError);
+    expect([hi.withdrawalM3, hi.errorM3]).toEqual([250000, 30000]);
+    expect(hi.errorShareOfWithdrawal).toBeCloseTo(0.12, 12);
+    expect(hi.reconciles).toBe(true);
+    expect(balanceGradePenalty(hi.errorShareOfWithdrawal)).toBe(1);
+    expect(balanceGradeNote(hi)).toBe("Balance error above 10%: grade lowered");
+    expect(BALANCE_ERROR_NOTE).toBe("Balance error above 10%: grade lowered");
+  });
+
+  it("gradeAfterBalance lowers one letter, keeps D at D and leaves an ungraded cell ungraded", () => {
+    expect((["A", "B", "C", "D", "none"] as const).map((g) => gradeAfterBalance(g, 1))).toEqual(["B", "C", "D", "D", "none"]);
+    expect((["A", "B", "C", "D", "none"] as const).map((g) => gradeAfterBalance(g, 0))).toEqual(["A", "B", "C", "D", "none"]);
+  });
+
+  it("with the penalty, every F12 cell drops one letter, and the counted PWI falls because grade C counts the low value", () => {
+    const site = (penalty: number) => buildFactoryPwi(factories.find((f) => f.id === "F12")!, undefined, removals.find((r) => r.factoryId === "F12")!, f12Example, penalty);
+    const [ok, lowered] = [site(0), site(1)];
+    ok.cells.forEach((c, i) => expect(lowered.cells[i].grade).toBe(gradeAfterBalance(c.grade, 1)));
+    expect(lowered.cells.find((c) => c.pillar === "P1" && c.dimension === "Quality")!.grade).toBe("B"); // A to B
+    expect(lowered.cells.find((c) => c.pillar === "P3" && c.dimension === "Accessibility")!.grade).toBe("D"); // C to D
+    expect(lowered.cells.find((c) => c.pillar === "P3" && c.dimension === "Quality")!.grade).toBe("none");
+    expect(lowered.sitePwi).toBeLessThan(ok.sitePwi);
+    expect(lowered.sitePwiCentral).toBeCloseTo(ok.sitePwiCentral, 12); // the central scores do not change
+    expect(lowered.gradePenalty).toBe(1);
   });
 });

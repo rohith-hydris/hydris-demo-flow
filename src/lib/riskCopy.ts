@@ -1,5 +1,5 @@
 import { fmtScore } from "./format";
-import { PILLAR_LABELS, PRESENT_AT, WATCH_AT, type RiskResult } from "./risk";
+import { PILLAR_LABELS, PRESENT_AT, UCW_ALWAYS_WATCH, WATCH_AT, type RiskResult } from "./risk";
 import type { Site } from "./selectors";
 import type { RiskCode } from "./types";
 
@@ -48,7 +48,15 @@ export const outlookText = (score: number, o: { y2030: number; y2050: number }) 
 
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 
-export function explainRisk(r: RiskResult, site: Site): RiskExplanation {
+/** The wording for a ucw card that is fixed at Watch. Used only while UCW_ALWAYS_WATCH is true. */
+export const UCW_FIXED_TEXT = {
+  reason: "Always shown as Watch, because the country treats little of the wastewater it collects. The score does not change the status.",
+  threshold: "The status is fixed, so there is no threshold.",
+  whatWouldChange: "It stays Watch whatever the score.",
+} as const;
+
+export function explainRisk(r: RiskResult, site: Site, ucwAlwaysWatch: boolean = UCW_ALWAYS_WATCH): RiskExplanation {
+  const fixedWatch = r.code === "ucw" && ucwAlwaysWatch;
   const vintage = AQUEDUCT_4.has(r.code) ? "Aqueduct 4.0" : "About 2014";
   if (r.gap) {
     const inR = !r.excludedFromCounts && r.code !== "ucw" && r.code !== "rri" && r.code !== "tex";
@@ -73,13 +81,13 @@ export function explainRisk(r: RiskResult, site: Site): RiskExplanation {
     : "This risk is not present at this site.";
 
   const reason =
-    r.code === "ucw" ? "Always shown as Watch, because the country treats little of the wastewater it collects. The score does not change the status."
+    fixedWatch ? UCW_FIXED_TEXT.reason
     : r.status === "Present" ? `The score of ${score} out of 5 is at or above ${fmtScore(PRESENT_AT)}.`
     : r.status === "Watch" ? `The score of ${score} out of 5 is from ${fmtScore(WATCH_AT)} up to ${fmtScore(PRESENT_AT)}.`
     : `The score of ${score} out of 5 is below ${fmtScore(WATCH_AT)}.`;
 
   const threshold =
-    r.code === "ucw" ? "The status is fixed, so there is no threshold."
+    fixedWatch ? UCW_FIXED_TEXT.threshold
     : r.status === "Present"
       ? near(s, PRESENT_AT) ? `Exactly on the Present line (${fmtScore(PRESENT_AT)}).` : `${fmtScore(s - PRESENT_AT)} above the Present line (${fmtScore(PRESENT_AT)}).`
     : r.status === "Watch"
@@ -87,7 +95,7 @@ export function explainRisk(r: RiskResult, site: Site): RiskExplanation {
       : `${fmtScore(WATCH_AT - s)} below the Watch line (${fmtScore(WATCH_AT)}).`;
 
   const whatWouldChange =
-    r.code === "ucw" ? "It stays Watch whatever the score."
+    fixedWatch ? UCW_FIXED_TEXT.whatWouldChange
     : r.status === "Present"
       ? near(s, PRESENT_AT) ? "It would drop to Watch with any fall in the score." : `It would drop to Watch if the score fell by more than ${fmtScore(s - PRESENT_AT)}.`
     : r.status === "Watch"

@@ -1,5 +1,6 @@
 import { documents } from "@/src/data/documents";
 import { inspections } from "@/src/data/inspections";
+import { DEMO_TODAY } from "@/src/data/tenants";
 import { projects } from "@/src/data/projects";
 import type { ClaimAmount, DocumentRecord, InspectionRecord, InspectionReview, ProjectRecord } from "@/src/data/types";
 import { countedValue, lowValue } from "./pwi";
@@ -11,7 +12,42 @@ import type { FactoryId, InspectionStatus, ProjectStatus, ReadinessState } from 
 export const PROJECT_STATUSES: readonly ProjectStatus[] = ["Validated", "Pending validation", "Flagged", "Not counted"];
 export const READINESS_STATES: readonly ReadinessState[] = ["Ready", "Missing", "Failed check", "Expired / out of period", "Low confidence"];
 
+// ---- Monitoring expiry (V2 P17 C02, proposed and under review) -----------------------------------------------------------------
+
+/** A claim stops counting when its monitoring check is this many days overdue. Default 90; proposed, listed on the Methodology page. */
+export const MONITORING_EXPIRY_DAYS = 90;
+/** Days between monitoring checks: "quarterly". An assumption: V2 names the cadence, not a day count. */
+export const MONITORING_INTERVAL_DAYS = 91;
+
+const DAY_MS = 86_400_000;
+/** Whole days from one ISO date to another (b minus a), in UTC so daylight saving never shifts it. */
+export const daysBetween = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY_MS);
+
+/**
+ * Days a project's monitoring check is overdue on `today`: the next check fell due one interval after the last one, and each day
+ * after that is a day overdue. 0 when the check is not yet due, or when no monitoring date is recorded.
+ */
+export function monitoringOverdueDays(p: Pick<ProjectRecord, "lastMonitoringCheck">, today: string = DEMO_TODAY): number {
+  if (!p.lastMonitoringCheck) return 0;
+  return Math.max(0, daysBetween(p.lastMonitoringCheck, today) - MONITORING_INTERVAL_DAYS);
+}
+
+/** phi: 0 when the monitoring check is 90 or more days overdue (the claim has lapsed), otherwise 1. Multiplies the counted benefit. */
+export const phi = (p: Pick<ProjectRecord, "lastMonitoringCheck">, today: string = DEMO_TODAY): 0 | 1 =>
+  monitoringOverdueDays(p, today) >= MONITORING_EXPIRY_DAYS ? 0 : 1;
+
+/** The plain sentence for a project's monitoring state, or null when it has no overdue check. Generated from the dates, never typed. */
+export function monitoringNote(p: Pick<ProjectRecord, "lastMonitoringCheck">, today: string = DEMO_TODAY): string | null {
+  const days = monitoringOverdueDays(p, today);
+  if (days === 0) return null;
+  return phi(p, today) === 0
+    ? `Monitoring check ${days} days overdue. The claim lapsed at ${MONITORING_EXPIRY_DAYS} days, so none of its benefit counts.`
+    : `Monitoring check ${days} days overdue; claim lapses at ${MONITORING_EXPIRY_DAYS} days`;
+}
+
 export interface ProjectBenefit {
+  /** True when the monitoring check is 90 or more days overdue, so the claim counts nothing (phi = 0). */
+  lapsed: boolean;
   /** The claimed amount after attribution f: 50,000 x 50% = 25,000. */
   attributed: ClaimAmount;
   /** What counts today: the attributed amount after the evidence grade rule for Validated claims (grade C counts the low value), zero for Flagged and Not counted. */
@@ -28,10 +64,11 @@ const scale = (a: ClaimAmount, k: number): ClaimAmount =>
 export function projectBenefit(p: ProjectRecord): ProjectBenefit {
   const attributed = scale(p.claim, p.attribution);
   // V2 Section 2: a benefit counts only when it is Validated on an eligible claim. Evidence acceptance alone never counts it.
-  const counts = countsTowardPwi(p.states);
+  const lapsed = phi(p) === 0;
+  const counts = countsTowardPwi(p.states) && !lapsed;
   const counted = counts ? scale(attributed, countedValue(1, p.grade)) : scale(attributed, 0);
   const low = counts ? scale(attributed, lowValue(1, p.grade)) : scale(attributed, 0);
-  return { attributed, counted, low, provisional: p.status === "Pending validation" };
+  return { attributed, counted, low, provisional: p.status === "Pending validation", lapsed };
 }
 
 /** "Attribution share 50%" for a shared claim, or null at full attribution. */
@@ -52,7 +89,8 @@ export function displayNote(p: ProjectRecord, canValidate: boolean): string {
       ? "Flagged. Open the Validation agent to see the checks behind this flag."
       : "Flagged by the brand. Upload evidence to respond.";
   }
-  return p.note;
+  // The monitoring state is generated from the dates, after any typed note.
+  return [p.note, monitoringNote(p)].filter(Boolean).join("; ");
 }
 
 export function statusCounts(list: ProjectRecord[] = projects): Record<ProjectStatus, number> {

@@ -52,9 +52,10 @@ describe("V2 4.2 and 6: missing-data wording and columns", () => {
   it("'missing indicators never lower R' appears in no code, test or UI copy", () => {
     for (const { f, text } of sources()) expect(text, f).not.toMatch(/never lower|never lowers/i);
   });
-  it("risk tab header: F10 shows 90% coverage; no pillar is missing; the wording never calls renormalisation neutral", () => {
-    expect(coverageLine(by("F10"))).toBe("Data coverage 90% (9 of 10 risk indicators have a reading)");
-    expect(renormalisationLine(by("F10"))).toContain("highest of the rest");
+  it("risk tab header: F11 shows 90% coverage with no pillar missing, F10 is complete; the wording never calls renormalisation neutral", () => {
+    expect(coverageLine(by("F11"))).toBe("Data coverage 90% (9 of 10 risk indicators have a reading)");
+    expect(renormalisationLine(by("F11"))).toContain("highest of the rest");
+    expect(coverageLine(by("F10"))).toContain("100%");
     expect(coverageLine(by("F01"))).toContain("100%");
     for (const s of sites) expect(renormalisationLine(s)).not.toMatch(/neutral|no effect/i);
   });
@@ -74,7 +75,7 @@ describe("V2 4.2 and 6: missing-data wording and columns", () => {
     const leastReady = [...band1].sort((a, b) => a.readiness - b.readiness)[0];
     expect(sites.indexOf(leastReady)).toBeLessThan(8);
   });
-  it("Coverage is 100% for every site except F02, F10 and F11, which are at 90%", () => {
-    expect(sites.filter((s) => s.riskCoverage.share < 1).map((s) => [s.id, s.riskCoverage.share]).sort()).toEqual([["F02", 0.9], ["F10", 0.9], ["F11", 0.9]]);
+  it("Coverage is 100% for every site except F02 and F11, which are at 90%", () => {
+    expect(sites.filter((s) => s.riskCoverage.share < 1).map((s) => [s.id, s.riskCoverage.share]).sort()).toEqual([["F02", 0.9], ["F11", 0.9]]);
   });
 });

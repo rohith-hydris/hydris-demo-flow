@@ -1,4 +1,5 @@
 import { removals } from "@/src/data/cells";
+import { balanceGradePenalty, boundaryBalance } from "./boundary";
 import { delivered } from "@/src/data/delivered";
 import { f12Example } from "@/src/data/f12Example";
 import { factories } from "@/src/data/factories";
@@ -14,7 +15,7 @@ import { buildFactoryPwi, proRatedBenefitShare, type FactoryPwi } from "./pwi";
 import { rankRanges, rankSites, type RankInput, type RankRange } from "./rank";
 import { rollup, type Rollup } from "./rollup";
 import {
-  DEFAULT_WEIGHTS, bwsRise, evaluateRisks, recordGaps, renormalisationDelta, riskCounts, riskPillarsPolicy, siteRiskFlags, topDrivers, type SiteRiskFlags,
+  DEFAULT_WEIGHTS, bwsRise, evaluateRisks, recordGaps, renormalisationDelta, rankPresentCount, riskCounts, riskPillarsPolicy, siteRiskFlags, topDrivers, type SiteRiskFlags,
   type Pillars, type RiskCoverage, type RiskCounts, type RiskResult, type Weights,
 } from "./risk";
 import { canSeeFactory, type Scope } from "./scope";
@@ -42,6 +43,7 @@ function buildStatic(): StaticSite[] {
       delivered.find((d) => d.factoryId === record.id),
       removals.find((r) => r.factoryId === record.id)!,
       record.id === f12Example.factoryId ? f12Example : null,
+      balanceGradePenalty(boundaryBalance(record.id)?.errorShareOfWithdrawal ?? 0),
     );
     const benefit = proRatedBenefitShare(pwi, MONTHS_ELAPSED);
     const opsRow = ops.find((o) => o.factoryId === record.id)!;
@@ -92,7 +94,7 @@ export interface Site {
 }
 
 const toRankInput = (s: StaticSite): RankInput => ({
-  id: s.record.id, pillars: s.pillars, footprintI: s.record.footprintI, presentCount: s.riskCounts.present, bwsRise: s.bwsRise,
+  id: s.record.id, pillars: s.pillars, footprintI: s.record.footprintI, presentCount: rankPresentCount(s.risks), bwsRise: s.bwsRise,
   missingPillars: s.missingPillars,
 });
 

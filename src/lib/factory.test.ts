@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { projects } from "@/src/data/projects";
 import { fmtCellScore, fmtPct1, fmtScore3 } from "./format";
 import { GUIDE_CAPTION, guideDetail, ledgerFor, METHOD_VERSION, priorMonthSitePwi, waterBalance } from "./impact";
-import { explainRisk } from "./riskCopy";
+import { UCW_FIXED_TEXT, explainRisk } from "./riskCopy";
 import { fmtClaim, fmtMeasure } from "./measure";
 import { whyThisRank } from "./explain";
 import { FACTORY_TABS, factoryHref, parseFactoryTab } from "./factoryTabs";
@@ -110,7 +110,7 @@ describe("Why this rank (PRODUCT 4.4)", () => {
   it("a supplier is ranked among its own factories: F14 is 2 of 3", () => {
     const own = getSites(supplier);
     expect(whyThisRank(getSite(supplier, "F14")!, own)).toBe(
-      "Ranked 2 of 3. It sits in Band 1 (R 0.61, at or above 0.60) and has the 2nd largest water footprint of 3 in the band (I 0.58). Quadrant: Act now.",
+      "Ranked 2 of 3. It sits in Band 1 (R 0.62, at or above 0.60) and has the 2nd largest water footprint of 3 in the band (I 0.58). Quadrant: Act now.",
     );
   });
 });
@@ -153,11 +153,26 @@ describe("risk card text (PRODUCT 4.4)", () => {
     expect(e.caveats.join(" ")).toContain("not used in R");
   });
 
-  it("country-level risks carry the spec note; ucw is always Watch", () => {
+  it("country-level risks carry the spec note", () => {
     expect(explain("F01", "rri").caveats).toContain("Country-level, identical across sites, not used for within-country ranking.");
+  });
+
+  it("ucw reads like any other risk while UCW_ALWAYS_WATCH is false: a threshold position and what would change it", () => {
     const u = explain("F12", "ucw");
-    expect(u.reason).toContain("Always shown as Watch");
+    expect(u.reason).toBe("The score of 2.50 out of 5 is from 2.00 up to 3.00.");
+    expect(u.threshold).toBe("0.50 below the Present line (3.00) and 0.50 above the Watch line (2.00).");
+    expect(u.whatWouldChange).toBe("It would become Present if the score rose by 0.50 or more, or Not present if it fell by more than 0.50.");
+    expect(u.reason).not.toContain("Always shown as Watch");
+  });
+
+  it("with the constant rule switched on, the ucw card says it is fixed at Watch, from the same wording constants", () => {
+    const f12 = site("F12");
+    const u = explainRisk(f12.risks.find((r) => r.code === "ucw")!, f12, true);
+    expect(u.reason).toBe(UCW_FIXED_TEXT.reason);
+    expect(u.threshold).toBe("The status is fixed, so there is no threshold.");
     expect(u.whatWouldChange).toBe("It stays Watch whatever the score.");
+    const other = explainRisk(f12.risks.find((r) => r.code === "drr")!, f12, true);
+    expect(other.whatWouldChange).not.toBe(UCW_FIXED_TEXT.whatWouldChange);
   });
 
   it("coastal eutrophication is flagged as separate and out of the counts", () => {

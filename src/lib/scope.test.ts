@@ -31,9 +31,9 @@ describe("data scoping (PRODUCT 2)", () => {
 
   it("inScope filters any list that has a factoryId", () => {
     expect(new Set(inScope(supplier, projects).map((p) => p.factoryId))).toEqual(new Set(["F12", "F13", "F14"]));
-    expect(inScope(supplier, projects)).toHaveLength(10); // 8 + 1 + 1
+    expect(inScope(supplier, projects)).toHaveLength(11); // 8 + 1 + 1 + 1 (PRJ-702)
     expect(new Set(inScope(supplier, documents).map((d) => d.factoryId))).toEqual(new Set(["F12", "F13", "F14"]));
-    expect(inScope(brand, projects)).toHaveLength(21);
+    expect(inScope(brand, projects)).toHaveLength(22);
   });
 
   it("the supplier role gets only its own sites, suppliers and alerts from the selectors", () => {

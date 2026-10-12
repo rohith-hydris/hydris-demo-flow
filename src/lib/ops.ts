@@ -1,5 +1,7 @@
 import { factories } from "@/src/data/factories";
 import type { OpsRecord } from "@/src/data/types";
+import { projects } from "@/src/data/projects";
+import { monitoringOverdueDays } from "./claims";
 import { BEHIND_TARGET_SHARE, type ProRatedBenefit } from "./pwi";
 import type { FactoryId, Health, Severity, SupplierId, TierDirection, ZdhcTier } from "./types";
 
@@ -95,7 +97,8 @@ export function deriveAlerts(row: OpsRecord, benefit?: ProRatedBenefit | null): 
   if (row.benefitBehindAlert && benefit) {
     const behind = benefitBehindMessage(benefit);
     if (behind) {
-      const overdue = row.overdueMonitoring ? `; ${row.overdueMonitoring.project} monitoring check ${row.overdueMonitoring.days} days overdue` : "";
+      const days = row.overdueMonitoring ? monitoringOverdueDays(projects.find((x) => x.id === row.overdueMonitoring!.project) ?? {}) : 0;
+      const overdue = row.overdueMonitoring && days > 0 ? `; ${row.overdueMonitoring.project} monitoring check ${days} days overdue` : "";
       out.push({ rule: "benefit-behind", severity: "Medium", ageDays: null, message: behind + overdue });
     }
   }

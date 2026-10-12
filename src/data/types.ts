@@ -73,7 +73,8 @@ export interface OpsRecord {
   /** The plant tracks "benefit behind target" from its pro-rated benefit shares (issue A3). */
   benefitBehindAlert?: boolean;
   /** A project monitoring check that is overdue, named in the benefit alert. */
-  overdueMonitoring?: { project: string; days: number };
+  /** A project whose overdue monitoring check is named in the benefit alert. The days overdue are computed from the project (claims.ts). */
+  overdueMonitoring?: { project: string };
 }
 
 export type Measure =
@@ -120,6 +121,8 @@ export interface ProjectRecord {
   states: ReviewStates;
   /** V2 5.1. */
   boundary: string; counterfactual: string; operatingPeriod: string; monitoringRequirement: string;
+  /** ISO date of the last monitoring check. Overdue days and the 90-day lapse are computed from it (src/lib/claims.ts). Absent: no monitoring cadence recorded. */
+  lastMonitoringCheck?: string;
   /** Share of funding paid by this participant. Separate from `attribution`, the eligible benefit attribution. null = not recorded. */
   fundingShare: number | null;
   eligibilityChecks: EligibilityChecks;

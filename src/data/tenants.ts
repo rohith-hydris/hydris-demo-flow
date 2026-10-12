@@ -9,3 +9,5 @@ export const CURRENT_MONTH = { label: "September 2026", status: "Draft" } as con
 /** Demo estimate: months of the monitoring year elapsed, April to September 2026 (CURRENT_MONTH). Pro-rates annual targets. */
 export const MONTHS_ELAPSED = 6;
 export const TODAY = "10 Oct 2026";
+/** The demo's "today" as an ISO date, for the day counts in src/lib (monitoring overdue days). The same day as TODAY. */
+export const DEMO_TODAY = "2026-10-10";

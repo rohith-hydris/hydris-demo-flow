@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, HelpCircle, Info, X, XCircle } from "lucide-react";
 import type { ProjectRecord } from "@/src/data/types";
-import { projectBenefit } from "@/src/lib/claims";
+import { monitoringOverdueDays, projectBenefit } from "@/src/lib/claims";
 import { fmtClaim } from "@/src/lib/measure";
 import { MAX_ALLOCATION, allocationConflictText, claimsWithoutFunding, totalAllocation, totalFunding } from "@/src/lib/shared";
 import { STATE_FIELDS, geographyOnly, summaryStatus } from "@/src/lib/states";
@@ -136,7 +136,7 @@ function Drawer({ project: p, siteName, onClose }: { project: ProjectRecord; sit
             <dt className="text-ink-500">Operating period</dt><dd>{p.operatingPeriod}</dd>
             <dt className="text-ink-500">Monitoring requirement</dt><dd>{p.monitoringRequirement}</dd>
           </dl>
-          {/overdue/i.test(p.monitoringRequirement) && <p className="mt-2 flex flex-wrap items-center gap-2 text-ink-700">Monitoring-expiry rule (90 days) under review. <ProposedBadge /></p>}
+          {monitoringOverdueDays(p) > 0 && <p className="mt-2 flex flex-wrap items-center gap-2 text-ink-700">Monitoring-expiry rule (90 days) under review. <ProposedBadge /></p>}
         </section>
       </aside>
     </div>,

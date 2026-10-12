@@ -1,5 +1,5 @@
 import type { LedgerEntry, ProjectRecord } from "@/src/data/types";
-import { projectBenefit, projectsFor } from "./claims";
+import { displayNote, projectBenefit, projectsFor } from "./claims";
 import { fmtCellScore, fmtInt, fmtPct1, fmtScore, fmtScore3, round } from "./format";
 import { METHOD_VERSION } from "./impact";
 import { fmtClaim, fmtMeasure, measureNote } from "./measure";
@@ -219,6 +219,6 @@ export function traceProject(p: ProjectRecord): Trace {
       { label: "Method", value: p.method },
     ],
     method: PWI_METHOD, grade: gradeOf(p.grade),
-    note: p.note || undefined,
+    note: displayNote(p, true) || undefined,
   };
 }

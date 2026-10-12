@@ -14,8 +14,13 @@ const s = (
   bws30: o[0], bwd30: o[1], bwd50: o[2], iav30: o[3], iav50: o[4], sev30: o[5], sev50: o[6],
 });
 
-// V2 4.2: F10 coastal flood has no data (R unchanged: the flood pillar still has riverine flood). F11 coastal eutrophication
-// could not be assessed (it is outside R and the counts). Scores are kept for the record but not used where a gap is set.
+// V2 4.2: F11 coastal eutrophication could not be assessed (it is outside R and the counts). Scores are kept for the record but
+// not used where a gap is set.
+// Issue C4, geographic consistency (demo estimates that move F14's R from the PRODUCT 5.5 check value):
+//  - F10 (Ranipet), F13 (Sriperumbudur) and F14 (Oragadam) are inland, so their coastal flood is 0.0, "No Risk". F10 used to carry a
+//    coastal flood "No data" gap (V2 4.2); it now has a reading, so its coverage is 100% and its R is unchanged at 0.55.
+//  - F13 and F14 sit in the same flood plain, so their riverine flood scores are within 0.5: F13 4.5, F14 4.0 (was 3.75, with a
+//    coastal flood of 2.85). F14's flood pillar rises from 0.75 to 0.80 and its R from 0.61 to 0.62.
 // Issue C1, so the demo shows a missing-data effect on R (both are demo estimates that move R from the PRODUCT 5.5 check values):
 //  - F02 has no groundwater reading, so the whole groundwater pillar drops out and the other weights renormalise (R 0.71 to 0.69).
 //  - F11 has no riverine flood reading but a nonzero coastal flood score (1.0, not the 0.00 in PRODUCT 5.6), so its flood pillar
@@ -30,11 +35,11 @@ export const riskScores: RiskScoreRecord[] = [
   { factoryId: "F07", scores: s(2.0, 1.6, 1.1, 1.4, 2.45, 2.5, 1.5, 0.0, 1.9, 2.9, 2.5, 3.6, 1.48, 2.55, 2.5, [2.2, 1.72, 1.9, 1.22, 1.4, 1.52, 1.7]) },
   { factoryId: "F08", scores: s(1.5, 1.1, 0.6, 0.9, 1.5, 2.0, 1.25, 0.0, 0.75, 1.75, 2.5, 3.6, 1.28, 1.9, 2.0, [1.7, 1.22, 1.4, 0.72, 0.9, 1.02, 1.2]) },
   { factoryId: "F09", scores: s(3.0, 2.6, 2.1, 2.4, 3.5, 3.25, 2.25, 0.0, 2.75, 3.75, 2.5, 3.6, 1.75, 3.45, 3.5, [3.2, 2.72, 2.9, 2.22, 2.4, 2.52, 2.7]) },
-  { factoryId: "F10", scores: s(2.75, 2.35, 1.85, 2.15, 2.75, 2.75, 2.0, 0.0, 2.5, 3.5, 2.5, 3.6, 1.62, 3.05, 3.25, [2.95, 2.47, 2.65, 1.97, 2.15, 2.27, 2.45]), gaps: { cfr: "No data" } },
+  { factoryId: "F10", scores: s(2.75, 2.35, 1.85, 2.15, 2.75, 2.75, 2.0, 0.0, 2.5, 3.5, 2.5, 3.6, 1.62, 3.05, 3.25, [2.95, 2.47, 2.65, 1.97, 2.15, 2.27, 2.45]), cfrNoRisk: true },
   { factoryId: "F11", scores: s(1.75, 1.35, 0.85, 1.15, 1.7, 2.25, 1.5, 1.0, 1.4, 2.4, 2.5, 3.6, 1.37, 2.2, 2.25, [1.95, 1.47, 1.65, 0.97, 1.15, 1.27, 1.45]), gaps: { cep: "Error", rfr: "No data" } },
   { factoryId: "F12", scores: s(4.75, 4.35, 3.85, 4.15, 3.95, 4.0, 4.5, 3.6, 2.4, 3.4, 2.5, 3.6, 2.06, 4.5, 5.0, [4.85, 4.41, 4.5, 3.91, 4.0, 4.21, 4.3]) },
   { factoryId: "F13", scores: s(4.25, 3.85, 3.35, 3.65, 3.7, 3.75, 4.5, 0.0, 2.4, 3.4, 2.5, 3.6, 1.99, 4.25, 4.75, [4.45, 3.97, 4.15, 3.47, 3.65, 3.77, 3.95]) },
-  { factoryId: "F14", scores: s(3.0, 2.6, 2.1, 2.4, 2.7, 3.25, 3.75, 2.85, 1.65, 2.65, 2.5, 3.6, 1.72, 3.35, 3.5, [3.2, 2.72, 2.9, 2.22, 2.4, 2.52, 2.7]) },
+  { factoryId: "F14", scores: s(3.0, 2.6, 2.1, 2.4, 2.7, 3.25, 4.0, 0.0, 1.65, 2.65, 2.5, 3.6, 1.72, 3.35, 3.5, [3.2, 2.72, 2.9, 2.22, 2.4, 2.52, 2.7]) },
 ];
 
 export interface RiskCatalogueEntry {

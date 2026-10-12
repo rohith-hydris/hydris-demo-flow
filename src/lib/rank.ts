@@ -39,7 +39,7 @@ export interface RankedSite {
 
 type Scored = RankInput & { R: number; band: Band };
 
-/** Band first, then I (largest first); ties by higher R, then more Present risks, then the larger 2050 rise. */
+/** Band first, then I (largest first); ties by higher R, then more Present site-specific risks (rankPresentCount: not cep, tex, ucw or rri), then the larger 2050 rise. */
 function compare(a: Scored, b: Scored): number {
   if (a.band !== b.band) return a.band - b.band;
   // A site without I ranks last in its band.

@@ -4,7 +4,7 @@ import { scenarios } from "@/src/data/scenarios";
 import type { ProjectRecord } from "@/src/data/types";
 import { fmtInt } from "./format";
 import { METHOD_VERSION } from "./impact";
-import { projectsFor } from "./claims";
+import { displayNote, projectsFor } from "./claims";
 import { PILLARS, REMOVAL_TARGET, type PwiCell } from "./pwi";
 import type { Site } from "./selectors";
 import { GRADE_MEANING, type Trace, type TraceInput } from "./trace";
@@ -162,7 +162,7 @@ function factoryOutcomes(site: Site, baseline: ApprovedBaseline): { rows: Outcom
         ["Attributed benefit = claimed benefit × attribution share f", `${bs}: ${bs === "Measured" ? "measured but not yet validated" : "validated on an eligible claim"}`],
         [{ label: "Project", value: p.id }, { label: "Method", value: p.method }, { label: "Attribution share f", value: `${Math.round(p.attribution * 100)}%` },
           { label: "Period", value: p.operatingPeriod }, { label: "Evidence", value: `Grade ${p.grade === "none" ? "none" : p.grade}, ${p.states.evidenceAcceptance}` },
-          { label: "Monitoring", value: p.monitoringRequirement }, { label: "Source opportunity", value: "None recorded" }], p.grade, p.note || undefined),
+          { label: "Monitoring", value: p.monitoringRequirement }, { label: "Source opportunity", value: "None recorded" }], p.grade, displayNote(p, true) || undefined),
     });
   }
 

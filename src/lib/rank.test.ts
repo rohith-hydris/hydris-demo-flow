@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { riskScores } from "@/src/data/risks";
 import { factories } from "@/src/data/factories";
 import { bandOf, quadrantOf, rankRanges, rankSites, tierOf, UNSTABLE_WIDTH, type RankInput } from "./rank";
-import { bwsRise, evaluateRisks, riskCounts, riskPillars, type Pillars } from "./risk";
+import { bwsRise, evaluateRisks, rankPresentCount, riskCounts, riskPillars, type Pillars } from "./risk";
 import { getRankRanges, getSites } from "./selectors";
 import { scopeFor } from "./scope";
 import { siteChecks } from "./specCheckValues";
@@ -12,7 +12,7 @@ const inputs = (): RankInput[] =>
     const scores = riskScores.find((r) => r.factoryId === f.id)!.scores;
     return {
       id: f.id, pillars: riskPillars(scores), footprintI: f.footprintI,
-      presentCount: riskCounts(evaluateRisks(f.id, scores)).present, bwsRise: bwsRise(scores),
+      presentCount: rankPresentCount(evaluateRisks(f.id, scores)), bwsRise: bwsRise(scores),
     };
   });
 
@@ -189,5 +189,73 @@ describe("the 2050 water stress rise is still the last tie-break (B2)", () => {
   it("all 14 ranks still match the PRODUCT 5.5 check values", () => {
     const ranked = rankSites(inputs());
     for (const c of siteChecks) expect(ranked.find((r) => r.id === c.id)!.rank).toBe(c.rank);
+  });
+});
+
+// ---- C3: the tie-break counts site-specific Present risks only -------------------------------------------------------------------
+import { riskScores as allRiskScores } from "@/src/data/risks";
+import { RANK_EXCLUDED_RISKS } from "./risk";
+
+describe("rankPresentCount excludes cep, tex, ucw and rri (issue C3)", () => {
+  const f01 = allRiskScores.find((r) => r.factoryId === "F01")!.scores;
+  const results = (s: typeof f01) => evaluateRisks("F01", s);
+
+  it("counts Present risks other than the four excluded", () => {
+    expect([...RANK_EXCLUDED_RISKS]).toEqual(["cep", "tex", "ucw", "rri"]);
+    const r = results(f01);
+    const present = r.filter((x) => x.status === "Present");
+    expect(rankPresentCount(r)).toBe(present.filter((x) => !["cep", "tex", "ucw", "rri"].includes(x.code)).length);
+    // F01: 8 Present for display (rri and the textile composite among them), 6 site-specific.
+    expect(riskCounts(r).present).toBe(8);
+    expect(rankPresentCount(r)).toBe(6);
+  });
+
+  it("the display count is unchanged: riskCounts still includes the composite and country-level risks", () => {
+    expect(riskCounts(results(f01)).present).toBeGreaterThan(rankPresentCount(results(f01)));
+  });
+
+  it("a country-level or composite score never changes it, whatever its value", () => {
+    const base = rankPresentCount(results(f01));
+    for (const code of ["ucw", "rri", "tex", "cep"] as const) {
+      for (const v of [0, 1.5, 2.5, 3, 5]) expect(rankPresentCount(results({ ...f01, [code]: v }))).toBe(base);
+    }
+  });
+
+  it("a site-specific risk does change it", () => {
+    expect(rankPresentCount(results({ ...f01, bwd: 4 }))).toBe(rankPresentCount(results(f01)) + 1); // bwd 2.6 (Watch) to 4 (Present)
+  });
+
+  it("two sites tied on band, I and R are ordered by the new count", () => {
+    // Same worst indicator in every pillar, so the pillars and R are identical; B has two more Present scarcity indicators.
+    const a = { ...f01, bws: 3.9, bwd: 1, iav: 1, sev: 1 };
+    const b = { ...f01, bws: 3.9, bwd: 3.5, iav: 3.5, sev: 1 };
+    const mk = (id: string, s: typeof f01): RankInput => ({ id, pillars: riskPillars(s), footprintI: 0.6, presentCount: rankPresentCount(evaluateRisks(id, s)), bwsRise: 0 });
+    const ia = mk("A", a), ib = mk("B", b);
+    expect(ia.pillars).toEqual(ib.pillars);
+    expect(ib.presentCount).toBe(ia.presentCount + 2);
+    expect(rankSites([ia, ib]).map((r) => r.id)).toEqual(["B", "A"]);
+    expect(rankSites([ib, ia]).map((r) => r.id)).toEqual(["B", "A"]);
+  });
+
+  it("adding a constant country risk never changes a within-country order", () => {
+    const a = { ...f01, bws: 3.9, bwd: 1, iav: 1, sev: 1 };
+    const b = { ...f01, bws: 3.9, bwd: 3.5, iav: 3.5, sev: 1 };
+    const order = (sa: typeof a, sb: typeof b) => {
+      const mk = (id: string, s: typeof f01): RankInput => ({ id, pillars: riskPillars(s), footprintI: 0.6, presentCount: rankPresentCount(evaluateRisks(id, s)), bwsRise: 0 });
+      return rankSites([mk("A", sa), mk("B", sb)]).map((r) => r.id);
+    };
+    const expected = order(a, b);
+    for (const code of ["ucw", "rri"] as const) {
+      for (const v of [0, 2.5, 5]) expect(order({ ...a, [code]: v }, { ...b, [code]: v })).toEqual(expected); // the same constant on both
+      expect(order({ ...a, [code]: 5 }, { ...b, [code]: 0 })).toEqual(expected); // and even a different one on each
+      expect(order({ ...a, [code]: 0 }, { ...b, [code]: 5 })).toEqual(expected);
+    }
+  });
+
+  it("the 14 demo sites keep their PRODUCT 5.5 order and the display Present and Watch counts", () => {
+    expect(rankSites(inputs()).map((r) => r.id)).toEqual(siteChecks.map((c) => c.id));
+    const sites = getSites(scopeFor("brand"));
+    for (const s of sites) expect(s.riskCounts.present).toBeGreaterThanOrEqual(0);
+    expect(sites.map((s) => s.id)).toEqual(siteChecks.map((c) => c.id));
   });
 });

@@ -1,8 +1,8 @@
-import { boundaryBalance } from "@/src/lib/boundary";
+import { balanceGradeNote, boundaryBalance } from "@/src/lib/boundary";
 import { fmtInt, fmtPct1 } from "@/src/lib/format";
 import { waterBalance } from "@/src/lib/impact";
 import type { Site } from "@/src/lib/selectors";
-import { ProposedBadge } from "@/src/components/ui";
+import { ProposedBadge, StatusPill } from "@/src/components/ui";
 
 const m3 = (n: number) => `${fmtInt(n)} m³`;
 
@@ -50,6 +50,11 @@ export default function WaterBalanceCard({ site }: { site: Site }) {
         <Line label="Change in storage" value={signed(bb.storageChangeM3)} strong />
         <Line label={`Error (${fmtPct1(bb.errorShareOfWithdrawal)} of withdrawal)`} value={m3(bb.errorM3)} strong />
       </dl>
+      {balanceGradeNote(bb) && (
+        <p className="mt-3" role="status">
+          <StatusPill tone="caution" shape="triangle" label={balanceGradeNote(bb)!} />
+        </p>
+      )}
       <p className="mt-3 rounded-tile bg-blue-50 p-3 text-sm text-ink-700" role="status">
         {bb.reconciles ? "Reconciles: " : "Does not reconcile: "}
         <span className="num">{fmtInt(bb.totalDischargeM3)} + {fmtInt(bb.consumptionM3)} + {fmtInt(bb.storageChangeM3)} + {fmtInt(bb.errorM3)} = {fmtInt(bb.withdrawalM3)} m{"³"}</span>

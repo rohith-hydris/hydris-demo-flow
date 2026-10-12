@@ -10,9 +10,9 @@ import { pct1 } from "./format";
 const project = (id: string) => projects.find((p) => p.id === id)!;
 
 describe("project claims (PRODUCT 5.10)", () => {
-  it("has 21 projects: 11 Validated, 6 Pending validation, 1 Flagged, 3 Not counted", () => {
-    expect(projects).toHaveLength(21);
-    expect(statusCounts()).toEqual({ Validated: 11, "Pending validation": 6, Flagged: 1, "Not counted": 3 });
+  it("has 22 projects: 12 Validated, 6 Pending validation, 1 Flagged, 3 Not counted", () => {
+    expect(projects).toHaveLength(22);
+    expect(statusCounts()).toEqual({ Validated: 12, "Pending validation": 6, Flagged: 1, "Not counted": 3 });
   });
 
   it("7 claims await validation (Pending validation or Flagged)", () => {
@@ -57,7 +57,7 @@ describe("project claims (PRODUCT 5.10)", () => {
     expect(p.note).toBe("See validation script V1");
     expect(displayNote(p, true)).toBe("Flagged. Open the Validation agent to see the checks behind this flag.");
     expect(displayNote(p, false)).toBe("Flagged by the brand. Upload evidence to respond.");
-    expect(displayNote(project("PRJ-105"), true)).toBe("Monitoring check 62 days overdue; claim lapses at 90 days");
+    expect(displayNote(project("PRJ-105"), true)).toBe("Monitoring check 62 days overdue; claim lapses at 90 days"); // generated from the dates
   });
 
   it("PRJ-101 claim basis: 30,000 x 1.5 fills x 0.60 = 27,000", () => {
@@ -275,5 +275,109 @@ describe("inspection status is derived from the steps and the review log (issue 
     const retake = reviewInspection(i, { action: "retake", ...reviewer, step: 9 });
     expect(retake.ok && inspectionStatus(retake.inspection)).toBe("Rejected steps");
     expect(reviewInspection(i, { action: "confirm", ...reviewer }).ok).toBe(false); // step 9 failed
+  });
+});
+
+// ---- C5: the 90-day monitoring expiry is computed from dates ---------------------------------------------------------------------
+
+import { DEMO_TODAY, TODAY } from "@/src/data/tenants";
+import { daysBetween, MONITORING_EXPIRY_DAYS, MONITORING_INTERVAL_DAYS, monitoringNote, monitoringOverdueDays, phi } from "./claims";
+import { parameterRows } from "./methodology";
+import { getSite } from "./selectors";
+import { scopeFor } from "./scope";
+import { ops } from "@/src/data/ops";
+
+describe("monitoring expiry (issue C5)", () => {
+  // A project whose quarterly check fell due `overdue` days before today.
+  const lastCheck = (overdue: number) => {
+    const t = Date.parse(`${DEMO_TODAY}T00:00:00Z`) - (overdue + MONITORING_INTERVAL_DAYS) * 86_400_000;
+    return new Date(t).toISOString().slice(0, 10);
+  };
+  const withOverdue = (overdue: number) => ({ ...project("PRJ-701"), lastMonitoringCheck: lastCheck(overdue) });
+
+  it("the demo date is 10 Oct 2026 in both forms, and day counts are whole days", () => {
+    expect(DEMO_TODAY).toBe("2026-10-10");
+    expect(TODAY).toBe("10 Oct 2026");
+    expect(daysBetween("2026-10-09", "2026-10-10")).toBe(1);
+    expect(daysBetween("2026-03-28", "2026-03-30")).toBe(2); // across a daylight-saving change elsewhere, still 2
+    expect(daysBetween("2026-10-10", "2026-10-10")).toBe(0);
+  });
+
+  it("the default expiry is 90 days, and the Methodology page lists it as under review", () => {
+    expect(MONITORING_EXPIRY_DAYS).toBe(90);
+    const row = parameterRows().find((r) => r.id === "monitoring-expiry")!;
+    expect(row.status).toBe("underReview");
+    expect(row.value).toBe("Claim stops counting when a monitoring check is 90 days overdue");
+  });
+
+  it("89 days overdue: the claim still counts (phi 1) and warns that it lapses at 90", () => {
+    const p = withOverdue(89);
+    expect(monitoringOverdueDays(p)).toBe(89);
+    expect(phi(p)).toBe(1);
+    expect(projectBenefit(p).lapsed).toBe(false);
+    expect(projectBenefit(p).counted).toEqual({ unit: "m3", value: 28000 });
+    expect(monitoringNote(p)).toBe("Monitoring check 89 days overdue; claim lapses at 90 days");
+  });
+
+  it("90 days overdue: the claim lapses (phi 0) and counts nothing", () => {
+    const p = withOverdue(90);
+    expect(monitoringOverdueDays(p)).toBe(90);
+    expect(phi(p)).toBe(0);
+    expect(projectBenefit(p).lapsed).toBe(true);
+    expect(projectBenefit(p).counted).toEqual({ unit: "m3", value: 0 });
+    expect(projectBenefit(p).low).toEqual({ unit: "m3", value: 0 });
+    expect(projectBenefit(p).attributed).toEqual({ unit: "m3", value: 28000 }); // the claim itself is unchanged
+  });
+
+  it("91 days overdue: still lapsed, with a visible reason", () => {
+    const p = withOverdue(91);
+    expect(phi(p)).toBe(0);
+    expect(monitoringNote(p)).toBe("Monitoring check 91 days overdue. The claim lapsed at 90 days, so none of its benefit counts.");
+    expect(displayNote(p, true)).toContain("lapsed at 90 days");
+  });
+
+  it("a check that is not yet due, or no recorded date, is 0 days overdue and phi 1", () => {
+    expect(monitoringOverdueDays(withOverdue(0))).toBe(0);
+    const early = { ...project("PRJ-701"), lastMonitoringCheck: lastCheck(-30) };
+    expect([monitoringOverdueDays(early), phi(early), monitoringNote(early)]).toEqual([0, 1, null]);
+    expect([monitoringOverdueDays(project("PRJ-701")), phi(project("PRJ-701"))]).toEqual([0, 1]);
+  });
+
+  it("the cut-off moves with the date: the same project lapses a day later", () => {
+    const p = withOverdue(89);
+    expect(phi(p, DEMO_TODAY)).toBe(1);
+    expect(phi(p, "2026-10-11")).toBe(0);
+  });
+
+  it("PRJ-105 is 62 days overdue, computed from its last check, and its claim has not lapsed", () => {
+    const p = project("PRJ-105");
+    expect(p.lastMonitoringCheck).toBe("2026-05-10");
+    expect(monitoringOverdueDays(p)).toBe(62);
+    expect(phi(p)).toBe(1);
+    expect(projectBenefit(p).lapsed).toBe(false);
+    expect(projectBenefit(p).attributed).toEqual({ unit: "people", value: 900 });
+    expect(displayNote(p, true)).toBe("Monitoring check 62 days overdue; claim lapses at 90 days");
+  });
+
+  it("the typed '62 days' strings are gone from the data", () => {
+    expect(project("PRJ-105").note).toBe("");
+    expect(project("PRJ-105").monitoringRequirement).toBe("Quarterly functionality check");
+    expect(ops.find((o) => o.factoryId === "F12")!.overdueMonitoring).toEqual({ project: "PRJ-105" });
+  });
+
+  it("the F12 benefit alert takes its 62 days from the project", () => {
+    const site = getSite(scopeFor("brand"), "F12")!;
+    expect(site.alertMessage).toContain("PRJ-105 monitoring check 62 days overdue");
+  });
+
+  it("PRJ-702 is Validated, 91 days overdue, so it lapses to zero with a reason and its claimed 800 people stay on record", () => {
+    const p = project("PRJ-702");
+    expect(p.status).toBe("Validated");
+    expect(p.lastMonitoringCheck).toBe("2026-04-11");
+    expect(monitoringOverdueDays(p)).toBe(91);
+    expect(phi(p)).toBe(0);
+    const b = projectBenefit(p);
+    expect([b.lapsed, b.attributed, b.counted]).toEqual([true, { unit: "people", value: 800 }, { unit: "people", value: 0 }]);
+    expect(displayNote(p, false)).toBe("Monitoring check 91 days overdue. The claim lapsed at 90 days, so none of its benefit counts.");
   });
 });

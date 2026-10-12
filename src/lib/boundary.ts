@@ -23,8 +23,32 @@ export interface BoundaryBalance {
   condensateOrigin: string; transfers: string; dischargeDestination: string;
 }
 
-export function boundaryBalance(factoryId: FactoryId): BoundaryBalance | null {
+/**
+ * Mass-balance tolerance (V2 4.7, proposed, under review): a balance error above 10% of freshwater withdrawal lowers the grade of the
+ * site's cells one letter. At exactly 10.0% it does not.
+ */
+export const MASS_BALANCE_TOLERANCE = 0.1;
+export const BALANCE_ERROR_NOTE = "Balance error above 10%: grade lowered";
+
+/** 1 when the absolute balance error, as a share of freshwater withdrawal, is above 10%; otherwise 0. */
+export const balanceGradePenalty = (errorShare: number): 0 | 1 => (Math.abs(errorShare) > MASS_BALANCE_TOLERANCE ? 1 : 0);
+
+/** The note to show beside a balance whose error is above the tolerance, or null. */
+export const balanceGradeNote = (b: Pick<BoundaryBalance, "errorShareOfWithdrawal">): string | null =>
+  balanceGradePenalty(b.errorShareOfWithdrawal) === 1 ? BALANCE_ERROR_NOTE : null;
+
+/** The inputs of a whole-site balance (src/data/f12Balance.ts). The withdrawal and ETP flow come from the F12 worked example. */
+export interface BoundaryInputs {
+  factoryId: string; meteredConsumptionM3: number; changeInStorageM3: number; internalRecirculationM3: number;
+  condensateOrigin: string; transfers: string; dischargeDestination: string;
+}
+
+export function boundaryBalance(factoryId: FactoryId, inputs: BoundaryInputs = f12Boundary): BoundaryBalance | null {
   if (factoryId !== f12Boundary.factoryId) return null;
+  return computeBoundaryBalance(inputs);
+}
+
+export function computeBoundaryBalance(f12Boundary: BoundaryInputs): BoundaryBalance {
   const w = f12Example.baselineWithdrawalM3;
   const total = f12Example.etpFlowM3;
   const same = f12Example.compliantBasinDischargeM3;

@@ -65,7 +65,7 @@ function ProjectCard({ project: p, siteName, canValidate }: { project: ProjectRe
         </div>
       </dl>
 
-      {p.note && <p className={`mt-4 text-ink-700 ${flagged ? "rounded-tile bg-[var(--negative-bg)] p-3" : ""}`}>{displayNote(p, canValidate)}</p>}
+      {displayNote(p, canValidate) && <p className={`mt-4 text-ink-700 ${flagged ? "rounded-tile bg-[var(--negative-bg)] p-3" : ""}`}>{displayNote(p, canValidate)}</p>}
 
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
           <ProjectDrawerButton project={p} siteName={siteName} />

@@ -21,6 +21,17 @@ export const REMOVAL_TARGET = 0.9;
  * from PRJ-401's 8,400 of 12,000) are implied by the spec; A and D are our illustrative constants. Configurable.
  */
 export const GRADE_FACTORS: Record<CellGrade, number> = { A: 0.95, B: 0.85, C: 0.7, D: 0, none: 0 };
+const GRADE_ORDER: readonly CellGrade[] = ["A", "B", "C", "D"];
+
+/**
+ * The grade after the mass-balance rule (src/lib/boundary.ts balanceGradePenalty): one letter worse for each penalty step, D stays D,
+ * and a cell with no grade stays without one.
+ */
+export function gradeAfterBalance(grade: CellGrade, penalty: number): CellGrade {
+  const at = GRADE_ORDER.indexOf(grade);
+  return at < 0 ? grade : GRADE_ORDER[Math.min(GRADE_ORDER.length - 1, at + penalty)];
+}
+
 export const lowValue = (value: number, grade: CellGrade) => value * GRADE_FACTORS[grade];
 
 /**
@@ -236,6 +247,8 @@ export interface FactoryPwi {
   /** Internal status band, from counted PWI. */
   confidence: number; statusBand: StatusBand;
   evidenceGrade: EvidenceGrade;
+  /** 1 when the mass-balance error is above 10%, so every cell grade was lowered one letter. */
+  gradePenalty: number;
   /** Only the F12 worked example carries the Guide-compatible comparison (PRODUCT 6.6). */
   guide: { p1Quality: number; p1: number; sitePwi: number } | null;
 }
@@ -251,6 +264,8 @@ function deriveState(factoryId: FactoryId, pillar: Pillar, dimension: Dimension,
 
 export function buildFactoryPwi(
   factory: FactoryRecord, delivered: DeliveredRecord | undefined, removal: RemovalRecord, worked: WorkedExample | null,
+  /** 1 when the site's balance error is above 10% (balanceGradePenalty): every cell grade drops one letter. */
+  gradePenalty: number = 0,
 ): FactoryPwi {
   const confidence = confidenceOf(factory.id).confidence; // PRD 4.8: computed from the self-assessment and cross-checks
   const targets = cellTargets(factory.replenishmentNeededM3, factory.headcount, factory.householdSize);
@@ -285,7 +300,7 @@ export function buildFactoryPwi(
 
       const derived = deriveState(factory.id, pillar, dimension, score);
       const state = w ? w.state : derived.state;
-      const grade: CellGrade = w ? w.grade : score === 0 ? "none" : factory.evidenceGrade;
+      const grade: CellGrade = gradeAfterBalance(w ? w.grade : score === 0 ? "none" : factory.evidenceGrade, gradePenalty);
       cells.push({
         pillar, dimension, score, low: lowValue(score, grade), counted: countedValue(score, grade), state, targetState: "Defined",
         stateNote: w ? (w.stateNote ?? null) : derived.note,
@@ -324,6 +339,6 @@ export function buildFactoryPwi(
     sitePwiLow: sitePwi(pillarsLow.P1, pillarsLow.P2, pillarsLow.P3),
     volumetricBalance: balanceOf(true), volumetricBalanceCentral: balanceOf(false),
     confidence, statusBand: internalStatusBand(pwi, confidence),
-    evidenceGrade: factory.evidenceGrade, guide,
+    evidenceGrade: factory.evidenceGrade, gradePenalty, guide,
   };
 }

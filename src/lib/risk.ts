@@ -95,9 +95,16 @@ export const bwsRise = (s: RiskScores) => s.bws50 - s.bws;
 export const PRESENT_AT = 3.0;
 export const WATCH_AT = 2.0;
 
-/** Present at 3.0 and above, Watch from 2.0 up to 3.0, otherwise Not present. `ucw` is always Watch. */
-export function riskStatus(code: RiskCode, score: number): RiskStatus {
-  if (code === "ucw") return "Watch";
+/**
+ * Whether untreated connected wastewater (`ucw`) is always Watch, whatever its score (the PRODUCT 5.6 rule), or uses the same
+ * thresholds as every other risk. The PRD team has not confirmed the constant rule, so the demo uses the thresholds (false).
+ * Proposed, under review: methodology.ts open decision V2-UW. Every demo site scores 2.5, so either setting gives Watch today.
+ */
+export const UCW_ALWAYS_WATCH = false;
+
+/** Present at 3.0 and above, Watch from 2.0 up to 3.0, otherwise Not present. `ucw` is always Watch only when UCW_ALWAYS_WATCH is true. */
+export function riskStatus(code: RiskCode, score: number, ucwAlwaysWatch: boolean = UCW_ALWAYS_WATCH): RiskStatus {
+  if (code === "ucw" && ucwAlwaysWatch) return "Watch";
   if (score >= PRESENT_AT - 1e-9) return "Present";
   if (score >= WATCH_AT - 1e-9) return "Watch";
   return "Not present";
@@ -183,13 +190,13 @@ function ruleOf(code: RiskCode, flags: RiskFlags): RiskResult["rule"] {
 }
 const RULE_STATUS = { "Arid area": "Present", "Insignificant Trend": "Not present", "No Risk": "Not present" } as const;
 
-export function evaluateRisks(factoryId: FactoryId, s: RiskScores, gaps: RiskGaps = {}, flags: RiskFlags = {}): RiskResult[] {
+export function evaluateRisks(factoryId: FactoryId, s: RiskScores, gaps: RiskGaps = {}, flags: RiskFlags = {}, ucwAlwaysWatch: boolean = UCW_ALWAYS_WATCH): RiskResult[] {
   return riskCatalogue.map((c) => {
     const score = s[c.code];
     const rule = gaps[c.code] ? null : ruleOf(c.code, flags);
     return {
       code: c.code, name: c.name, shortName: c.shortName, category: c.category, rule, outlook: outlookOf(c.code, s),
-      score, scorePct: (score / 5) * 100, gap: gaps[c.code] ?? null, status: gaps[c.code] ?? (rule ? RULE_STATUS[rule] : riskStatus(c.code, score)),
+      score, scorePct: (score / 5) * 100, gap: gaps[c.code] ?? null, status: gaps[c.code] ?? (rule ? RULE_STATUS[rule] : riskStatus(c.code, score, ucwAlwaysWatch)),
       countryLevel: c.countryLevel, excludedFromCounts: c.code === "cep",
       compositeLabel: c.code === "tex" ? textileLabel(score) : null,
       rawValue: c.code === "bws" && flags.bwsPercent != null ? `${flags.bwsPercent}%` : (rawRiskValues[factoryId]?.[c.code] ?? null),
@@ -198,6 +205,17 @@ export function evaluateRisks(factoryId: FactoryId, s: RiskScores, gaps: RiskGap
 }
 
 export interface RiskCounts { present: number; watch: number; notPresent: number }
+
+/** Risks left out of the ranking tie-break: coastal eutrophication, the textile composite, and the country-level ucw and rri. */
+export const RANK_EXCLUDED_RISKS: readonly RiskCode[] = ["cep", "tex", "ucw", "rri"];
+
+/**
+ * Present risks for the ranking tie-break (PRODUCT 6.8): site-specific risks only. The composite and the country-level indicators are
+ * the same for every site in a country or are summaries of the others, so counting them cannot say which site has more risks.
+ * `riskCounts` is the display count and still includes them.
+ */
+export const rankPresentCount = (results: readonly RiskResult[]): number =>
+  results.filter((r) => r.status === "Present" && !RANK_EXCLUDED_RISKS.includes(r.code)).length;
 
 /** Counts over the 13 risks, excluding coastal eutrophication. */
 export function riskCounts(results: RiskResult[]): RiskCounts {

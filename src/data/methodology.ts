@@ -15,7 +15,7 @@ export interface ParameterRow {
 }
 
 /** Rows whose value comes from a code constant carry `valueFrom`, resolved in src/lib/methodology.ts. */
-export type ParameterSeed = Omit<ParameterRow, "value"> & { value?: string; valueFrom?: "dimensionWeights" | "qualityThresholds" };
+export type ParameterSeed = Omit<ParameterRow, "value"> & { value?: string; valueFrom?: "dimensionWeights" | "qualityThresholds" | "monitoringExpiry" };
 
 export const parameterSeeds: ParameterSeed[] = [
   { id: "pillar-split", parameter: "Pillar split P1 / P2 / P3", value: "0.20 / 0.40 / 0.40", status: "proposed", statusNote: "programme convention" },
@@ -29,8 +29,8 @@ export const parameterSeeds: ParameterSeed[] = [
   { id: "wash-ratios", parameter: "WASH audit ratios", value: "1 water point and washbasin per 6 workers; 1 toilet per 22", status: "openQuestion", statusNote: "OQ-M10, not checked against WASH4Work" },
   { id: "household-size", parameter: "Household size h", value: "NFHS-5 district factsheets (Census 2011 fallback)", status: "reference" },
   { id: "attributable-share", parameter: "Attributable production share a", value: "1.0 default", status: "configurable" },
-  { id: "mass-balance-tolerance", parameter: "Mass-balance tolerance", value: "Confidence drops one grade above 10% of freshwater withdrawal", status: "proposed" },
-  { id: "monitoring-expiry", parameter: "Monitoring-expiry rule", value: "Claim stops counting when a monitoring check is 90 days overdue", status: "underReview", statusNote: "V2 P17 C02" },
+  { id: "mass-balance-tolerance", parameter: "Mass-balance tolerance", value: "Cell grades drop one letter (D stays D) when the balance error is above 10% of freshwater withdrawal", status: "proposed" },
+  { id: "monitoring-expiry", parameter: "Monitoring-expiry rule", valueFrom: "monitoringExpiry", status: "underReview", statusNote: "V2 P17 C02" },
   { id: "compliance-exclusion", parameter: "Compliance / additionality exclusion", value: "Compliance-only benefit is excluded from benefit", status: "underReview", statusNote: "V2 P17 C02" },
   { id: "zero-target", parameter: "Zero-target treatment", value: "Missing scores 0 and is flagged. Not applicable drops out of the pillar. Demonstrated zero shows 1.0 with an evidence requirement.", status: "decisionPending", statusNote: "V2 P08 C01" },
   { id: "quality-spillover", parameter: "Pillar eligibility of on-site quality spill-over", value: "Removal above 90% is not counted in P2 or P3 until the decision is made", status: "decisionPending", statusNote: "V2 P08 C02" },
@@ -168,6 +168,7 @@ export const openDecisions: DecisionRow[] = [
   { id: "V2-QS", decision: "Eligibility of on-site quality spill-over above 90% in P2 and P3 (V2 P08 C02).", appearsIn: "Impact tab, Quality accounting", owner: OWNER, status: "Proposed, under review" },
   { id: "V2-CR", decision: "Compliance and additionality exclusion, and the 90-day monitoring-expiry rule (V2 P17 C02).", appearsIn: "Additionality Gate card, PRJ-105", owner: OWNER, status: "Proposed, under review" },
   { id: "V2-MD", decision: "Missing-data policy for risk score R: a missing indicator drops out and weights renormalise, which can raise or lower R (V2 P15 C01, P16 C01).", appearsIn: "Risk tab header, Ranking coverage column", owner: OWNER, status: "Proposed, under review" },
+  { id: "V2-UW", decision: "Whether untreated connected wastewater (ucw) is always Watch, whatever its score (PRODUCT 5.6), or uses the same thresholds as the other risks: Present at 3.0 and above, Watch from 2.0. The PRD team has not confirmed the constant rule. The demo uses the thresholds (UCW_ALWAYS_WATCH = false in src/lib/risk.ts). Every demo site scores 2.5, so no status changes today.", appearsIn: "Risk tab, untreated connected wastewater card", owner: OWNER, status: "Proposed, under review" },
   { id: "V2-HS", decision: "How plant health (0 to 100) is calculated. The PRD gives the bands but no formula. The demo uses 0.60 outlet compliance + 0.25 monitoring uptime + 0.15 data freshness (30-day window).", appearsIn: "Plant health on Overview and the factory card, alert severity", owner: OWNER, status: "Proposed, under review" },
   { id: "V2-SC", decision: "How the 52 self-assessment answers combine into site confidence. The PRD gives the 0 to 3 score, the evidence confidences (1.0, 0.7, 0.5) and the 0.10 penalty per failed check XV-01 to XV-10, but not the combination. The demo uses the mean of (score / 3 x evidence confidence).", appearsIn: "Site confidence on Overview and Impact, status band", owner: OWNER, status: "Proposed, under review" },
   { id: "V2-SA", decision: "Whether a supplier may approve a scenario as the delivery baseline. The demo reserves approval for the brand.", appearsIn: "Projects, Scenarios", owner: OWNER, status: "Proposed, under review" },

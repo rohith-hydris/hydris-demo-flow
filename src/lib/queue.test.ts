@@ -8,9 +8,9 @@ const supplier = scopeFor("supplier");
 const ids = (rows: { project: { id: string } }[]) => rows.map((r) => r.project.id);
 
 describe("project claims (PRODUCT 4.6)", () => {
-  it("lists all 21 for the brand: Flagged first, then Pending validation, then Validated, then Not counted", () => {
+  it("lists all 22 for the brand: Flagged first, then Pending validation, then Validated, then Not counted", () => {
     const rows = claimRows(brand);
-    expect(rows).toHaveLength(21);
+    expect(rows).toHaveLength(22);
     expect(rows[0].project.id).toBe("PRJ-201");
     const statuses = rows.map((r) => r.project.status);
     const order = ["Flagged", "Pending validation", "Validated", "Not counted"];
@@ -28,7 +28,7 @@ describe("project claims (PRODUCT 4.6)", () => {
     expect(claimRows(brand, { factoryId: "F12" })).toHaveLength(8);
     expect(claimRows(brand, { status: "Flagged" }).map((r) => r.project.id)).toEqual(["PRJ-201"]);
     expect(claimRows(brand, { pillar: "P3" })).toHaveLength(5);
-    expect(claimRows(brand, { pillar: "P2" })).toHaveLength(14); // 14 P2 + 5 P3 + 2 on-site P1 (PRJ-108, PRJ-303) = 21
+    expect(claimRows(brand, { pillar: "P2" })).toHaveLength(15); // 15 P2 + 5 P3 + 2 on-site P1 (PRJ-108, PRJ-303) = 22
     expect(claimRows(brand, { grade: "C" })).toHaveLength(7);
     expect(claimRows(brand, { grade: "none" })).toHaveLength(3);
     expect(claimRows(brand, { grade: "A" }).map((r) => r.project.id)).toEqual(["PRJ-901"]);
@@ -40,8 +40,8 @@ describe("project claims (PRODUCT 4.6)", () => {
     expect(claimRows(brand, { supplierId: "SUP1", factoryId: "F12" })).toHaveLength(0);
   });
 
-  it("the supplier role sees only its own 10 claims, however it filters", () => {
-    expect(claimRows(supplier)).toHaveLength(10);
+  it("the supplier role sees only its own 11 claims, however it filters", () => {
+    expect(claimRows(supplier)).toHaveLength(11);
     expect(new Set(claimRows(supplier).map((r) => r.site.id))).toEqual(new Set(["F12", "F13", "F14"]));
     expect(claimRows(supplier, { supplierId: "SUP1" })).toHaveLength(0);
     expect(claimRows(supplier, { factoryId: "F02" })).toHaveLength(0);
@@ -56,17 +56,17 @@ describe("project claims (PRODUCT 4.6)", () => {
 });
 
 describe("summary tiles (PRODUCT 4.6)", () => {
-  it("brand: Validated 11, Pending 6, Flagged 1, Not counted 3", () => {
+  it("brand: Validated 12, Pending 6, Flagged 1, Not counted 3", () => {
     const s = claimSummary(brand);
-    expect(s.counts).toEqual({ Validated: 11, "Pending validation": 6, Flagged: 1, "Not counted": 3 });
-    expect(s.total).toBe(21);
+    expect(s.counts).toEqual({ Validated: 12, "Pending validation": 6, Flagged: 1, "Not counted": 3 });
+    expect(s.total).toBe(22);
   });
 
   it("claimed against accepted benefit, per unit and never mixed", () => {
     const s = claimSummary(brand);
     expect(s.claimed.m3).toBe(255600);
     expect(s.accepted.m3).toBe(149400);
-    expect(s.claimed.people).toBe(4350);
+    expect(s.claimed.people).toBe(5150); // 4,350 + PRJ-702 (800), which has lapsed and counts nothing
     expect(s.accepted.people).toBe(2550);
     expect(s.claimed.kg).toEqual({ tss: 2500, tn: 200, tp: 40 });
     expect(s.accepted.kg).toEqual({ tss: 2500, tn: 200, tp: 40 });
@@ -80,12 +80,12 @@ describe("summary tiles (PRODUCT 4.6)", () => {
     }
   });
 
-  it("supplier: Validated 6, Pending 2, Flagged 0, Not counted 2", () => {
-    expect(claimSummary(supplier).counts).toEqual({ Validated: 6, "Pending validation": 2, Flagged: 0, "Not counted": 2 });
+  it("supplier: Validated 7, Pending 2, Flagged 0, Not counted 2", () => {
+    expect(claimSummary(supplier).counts).toEqual({ Validated: 7, "Pending validation": 2, Flagged: 0, "Not counted": 2 });
   });
 
   it("narrows by supplier and factory but not by status", () => {
-    expect(claimSummary(brand, { supplierId: "SUP5" }).total).toBe(10);
+    expect(claimSummary(brand, { supplierId: "SUP5" }).total).toBe(11);
     expect(claimSummary(brand, { factoryId: "F02" }).counts).toEqual({ Validated: 0, "Pending validation": 1, Flagged: 1, "Not counted": 0 });
   });
 });

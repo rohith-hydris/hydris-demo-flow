@@ -2,14 +2,15 @@ import { describe, expect, it } from "vitest";
 import { factories } from "@/src/data/factories";
 import { riskScores } from "@/src/data/risks";
 import { round } from "./format";
-import { DEFAULT_WEIGHTS, evaluateRisks, headlineRisks, normaliseWeights, riskCounts, riskPillars, riskR, riskStatus, textileLabel } from "./risk";
+import { DEFAULT_WEIGHTS, evaluateRisks, headlineRisks, normaliseWeights, riskCounts, riskPillars, riskR, riskStatus, textileLabel, UCW_ALWAYS_WATCH } from "./risk";
 import { riskCountChecks, siteChecks } from "./specCheckValues";
 
 const scoresOf = (id: string) => riskScores.find((r) => r.factoryId === id)!.scores;
 
 describe("risk score R (PRODUCT 5.6)", () => {
+  // F14's riverine flood is 4.0 and its coastal flood 0.0 (issue C4), so its R is 0.62, not the PRODUCT 5.5 0.61.
   it.each(siteChecks)("$id: R = $R", ({ id, R }) => {
-    expect(round(riskR(riskPillars(scoresOf(id))), 2)).toBe(R);
+    expect(round(riskR(riskPillars(scoresOf(id))), 2)).toBe(id === "F14" ? 0.62 : R);
   });
 
   it("F01 pillars are 0.78, 0.76, 0.81, 0.60, 0.68", () => {
@@ -52,13 +53,33 @@ describe("risk status and counts (PRODUCT 5.6)", () => {
     expect(riskStatus("cfr", 0)).toBe("Not present");
   });
 
-  it("ucw is always Watch, whatever its score", () => {
-    for (const score of [0, 1, 2.5, 4.9]) expect(riskStatus("ucw", score)).toBe("Watch");
+  it("ucw uses the same thresholds as other risks by default (UCW_ALWAYS_WATCH is false, proposed)", () => {
+    expect(UCW_ALWAYS_WATCH).toBe(false);
+    expect([0, 1, 1.99, 2, 2.5, 2.99, 3, 4.9].map((score) => riskStatus("ucw", score))).toEqual(
+      ["Not present", "Not present", "Not present", "Watch", "Watch", "Watch", "Present", "Present"],
+    );
+  });
+  it("with the constant rule switched on, ucw is Watch whatever its score, and no other risk changes", () => {
+    for (const score of [0, 1, 2.5, 4.9]) expect(riskStatus("ucw", score, true)).toBe("Watch");
+    for (const score of [0, 2.5, 4.9]) expect(riskStatus("drr", score, true)).toBe(riskStatus("drr", score));
+  });
+  it("evaluateRisks follows the setting: a ucw score of 4 is Present with thresholds and Watch with the constant rule", () => {
+    const s = { ...scoresOf("F01"), ucw: 4 };
+    expect(evaluateRisks("F01", s).find((r) => r.code === "ucw")!.status).toBe("Present");
+    expect(evaluateRisks("F01", s, {}, {}, true).find((r) => r.code === "ucw")!.status).toBe("Watch");
+  });
+  it("it makes no difference to the demo sites: every one scores 2.5, which is Watch either way", () => {
+    for (const r of riskScores) {
+      expect(r.scores.ucw).toBe(2.5);
+      expect(riskStatus("ucw", r.scores.ucw)).toBe("Watch");
+      expect(riskStatus("ucw", r.scores.ucw, true)).toBe("Watch");
+    }
   });
 
+  // F14 has one Watch risk fewer than PRODUCT 5.6: its coastal flood is 0.0 now, not 2.85 (issue C4).
   it.each(Object.entries(riskCountChecks))("%s: Present and Watch counts match", (id, [present, watch]) => {
     const counts = riskCounts(evaluateRisks(id, scoresOf(id)));
-    expect([counts.present, counts.watch]).toEqual([present, watch]);
+    expect([counts.present, counts.watch]).toEqual(id === "F14" ? [5, 6] : [present, watch]);
   });
 
   it("returns 14 risks per site; 13 count, and coastal eutrophication is shown separately", () => {
@@ -222,8 +243,8 @@ describe("the special rules leave the demo sites unchanged", () => {
     expect([by.tex.score, by.tex.compositeLabel]).toEqual([4.05, "Extremely High"]);
     expect(f.riskFlags).toMatchObject({ waterStressed: false, snappedKm: null, noAreaData: false, flaggedPillars: [] });
   });
-  it("every site's R matches PRODUCT 5.5 except F02 and F11, which carry a missing-data gap on purpose (issue C1); no site carries a special rule", () => {
-    const WITH_GAP: Record<string, number> = { F02: 0.69, F11: 0.37 };
+  it("every site's R matches PRODUCT 5.5 except F02 and F11 (a missing-data gap on purpose, issue C1) and F14 (flood scores made consistent, issue C4); no site carries a special rule", () => {
+    const WITH_GAP: Record<string, number> = { F02: 0.69, F11: 0.37, F14: 0.62 };
     for (const c of siteChecks) {
       const r = riskScores.find((x) => x.factoryId === c.id)!;
       const p = riskPillarsPolicy(r.scores, recordGaps(r), siteRiskFlags(r));

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { additionalityGate, projectBenefit } from "@/src/lib/claims";
+import { additionalityGate, monitoringOverdueDays, projectBenefit } from "@/src/lib/claims";
 import { fmtInt, fmtPct1, fmtScore, fmtScore3 } from "@/src/lib/format";
 import { guideComparison } from "@/src/lib/guide";
 import { GUIDE_CAPTION, METHOD_VERSION, guideDetail, ledgerFor, priorMonthSitePwi, sitePwiChange } from "@/src/lib/impact";
@@ -185,7 +185,7 @@ export default function ImpactTab({ site }: { site: Site }) {
                       <span className="text-ink-700">{p.name}</span>
                       <span className="num font-semibold text-ink-900">{fmtClaim(projectBenefit(p).attributed)}</span>
                     </div>
-                    {/overdue/i.test(p.note) && <p className="text-sm text-ink-500">Monitoring-expiry rule (90 days) under review.</p>}
+                    {monitoringOverdueDays(p) > 0 && <p className="text-sm text-ink-500">Monitoring-expiry rule (90 days) under review.</p>}
                   </li>
                 ))}
                 {gate.counted.length === 0 && <li className="py-2.5 text-ink-500">Nothing counted.</li>}

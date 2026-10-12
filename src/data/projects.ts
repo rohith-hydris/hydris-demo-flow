@@ -26,7 +26,7 @@ const DEFAULT_DETAIL = {
 };
 
 interface Extra {
-  claimBasis?: string; gateReason?: ProjectRecord["gateReason"];
+  claimBasis?: string; gateReason?: ProjectRecord["gateReason"]; lastMonitoringCheck?: string;
   states?: Partial<ReviewStates>; detail?: Partial<typeof DEFAULT_DETAIL>;
   fundingShare?: number | null; checks?: EligibilityChecks; participants?: Participant[];
 }
@@ -45,7 +45,7 @@ function p(
     // projects have collective-action eligibility Unknown, except where V2 names the checks.
     eligibilityChecks: extra.checks ?? (kind === "pending" || kind === "flagged" ? COLLECTIVE_UNKNOWN : PASS),
     participants: extra.participants ?? [],
-    claimBasis: extra.claimBasis, gateReason: extra.gateReason,
+    claimBasis: extra.claimBasis, gateReason: extra.gateReason, lastMonitoringCheck: extra.lastMonitoringCheck,
   };
 }
 
@@ -82,9 +82,11 @@ export const projects: ProjectRecord[] = [
     states: RELEASED,
     detail: { counterfactual: "Households below basic service before project", operatingPeriod: "12 months functional, then 5 years", monitoringRequirement: "Quarterly functionality check" },
   }),
-  p("PRJ-105", "F12", "Adyar riverside toilets and water points", "P3", "Accessibility", "JMP ladder", people(900), 1, "pending", "C", "Monitoring check 62 days overdue; claim lapses at 90 days", {
+  p("PRJ-105", "F12", "Adyar riverside toilets and water points", "P3", "Accessibility", "JMP ladder", people(900), 1, "pending", "C", "", {
     states: { evidenceAcceptance: "Accepted with warning", reportRelease: "Draft" },
-    detail: { counterfactual: "Facilities absent before project", operatingPeriod: "12 months functional", monitoringRequirement: "Quarterly functionality check (62 days overdue)" },
+    // Quarterly check last done 10 May 2026, so it fell due on 9 Aug 2026: 62 days overdue on 10 Oct 2026, computed in claims.ts.
+    lastMonitoringCheck: "2026-05-10",
+    detail: { counterfactual: "Facilities absent before project", operatingPeriod: "12 months functional", monitoringRequirement: "Quarterly functionality check" },
   }),
   p("PRJ-106", "F12", "Tertiary treatment, sub-basin", "P2", "Quality", "WQBA treatment system", { unit: "kg", tss: 2500, tn: 200, tp: 40 }, 1, "validated", "B", "Inlet and outlet lab data on file", {
     states: RELEASED,
@@ -102,6 +104,12 @@ export const projects: ProjectRecord[] = [
   p("PRJ-501", "F04", "Cauvery bank nature-based planting", "P3", "Availability", "VWBA inundation", m3(9000), 1, "pending", "C", "", { checks: { insidePolygon: "Pass", hydrologicallyConnected: "Pass", collectiveAction: "Unknown" } }),
   p("PRJ-601", "F13", "Sriperumbudur lake check dam", "P2", "Availability", "VWBA volume captured", m3(20000), 1, "pending", "C", ""),
   p("PRJ-701", "F14", "Oragadam lake rejuvenation", "P2", "Availability", "VWBA volume captured", m3(28000), 1, "validated", "B", ""),
+  // Issue C5: validated, but its quarterly check was last done on 11 Apr 2026 and fell due on 11 Jul 2026: 91 days overdue on 10 Oct 2026,
+  // past the 90-day expiry, so the claim lapses and counts nothing. Demo project.
+  p("PRJ-702", "F14", "Oragadam village water points", "P2", "Accessibility", "JMP ladder", people(800), 1, "validated", "B", "", {
+    lastMonitoringCheck: "2026-04-11",
+    detail: { counterfactual: "Households below basic service before project", operatingPeriod: "12 months functional", monitoringRequirement: "Quarterly functionality check" },
+  }),
   p("PRJ-801", "F05", "School toilets and water points", "P2", "Accessibility", "JMP ladder", people(1050), 1, "validated", "B", ""),
   p("PRJ-901", "F03", "Uthukuli pond desilting", "P2", "Availability", "VWBA volume captured", m3(14000), 1, "validated", "A", "Calibrated survey, third-party verified"),
   p("PRJ-1001", "F11", "Vellore wetland", "P3", "Availability", "VWBA inundation", m3(18000), 1, "validated", "B", ""),

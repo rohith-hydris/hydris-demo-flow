@@ -1,4 +1,5 @@
 import { parameterSeeds, type ParameterRow, type ParameterStatus } from "@/src/data/methodology";
+import { MONITORING_EXPIRY_DAYS } from "./claims";
 import { DIMENSION_WEIGHTS, REMOVAL_TARGET } from "./pwi";
 
 // V2 ADDENDUM Section 3: the Methodology page. Values that exist as code constants are read from them, so the page
@@ -25,6 +26,7 @@ export function parameterRows(): ParameterRow[] {
   const resolved = {
     dimensionWeights: `${two(DIMENSION_WEIGHTS.Availability)} / ${two(DIMENSION_WEIGHTS.Accessibility)} / ${two(DIMENSION_WEIGHTS.Quality)}`,
     qualityThresholds: `${Math.round(REMOVAL_TARGET * 100)}% / +5% / +5%`,
+    monitoringExpiry: `Claim stops counting when a monitoring check is ${MONITORING_EXPIRY_DAYS} days overdue`,
   };
   return parameterSeeds.map(({ valueFrom, value, ...rest }) => ({ ...rest, value: valueFrom ? resolved[valueFrom] : (value ?? "") }));
 }
