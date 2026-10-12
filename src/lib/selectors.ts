@@ -9,7 +9,7 @@ import { riskScores } from "@/src/data/risks";
 import { suppliers } from "@/src/data/suppliers";
 import type { FactoryRecord, OpsRecord, SupplierRecord } from "@/src/data/types";
 import { awaitingValidation, readinessShare } from "./claims";
-import { alertCounts, buildAlerts, healthBand, highestSeverity, isOffTrack, resolveOpsRow, tierDirection, type Alert } from "./ops";
+import { alertCounts, buildAlerts, deriveAlerts, healthBand, healthScore, highestSeverity, isOffTrack, tierDirection, topAlert, type Alert, type DerivedAlert } from "./ops";
 import { buildFactoryPwi, proRatedBenefitShare, type FactoryPwi } from "./pwi";
 import { rankRanges, rankSites, type RankInput, type RankRange } from "./rank";
 import { rollup, type Rollup } from "./rollup";
@@ -27,7 +27,7 @@ interface StaticSite {
   record: FactoryRecord; supplierName: string;
   pillars: Pillars; missingPillars: PillarKey[]; coverage: RiskCoverage;
   risks: RiskResult[]; riskCounts: RiskCounts; bwsRise: number; riskFlags: SiteRiskFlags;
-  pwi: FactoryPwi; ops: OpsRecord; health: Health; tierDirection: TierDirection | null; offTrack: boolean;
+  pwi: FactoryPwi; ops: OpsRecord; healthScore: number; alerts: DerivedAlert[]; health: Health; tierDirection: TierDirection | null; offTrack: boolean;
 }
 
 function buildStatic(): StaticSite[] {
@@ -44,7 +44,9 @@ function buildStatic(): StaticSite[] {
       record.id === f12Example.factoryId ? f12Example : null,
     );
     const benefit = proRatedBenefitShare(pwi, MONTHS_ELAPSED);
-    const opsRow = resolveOpsRow(ops.find((o) => o.factoryId === record.id)!, benefit);
+    const opsRow = ops.find((o) => o.factoryId === record.id)!;
+    const alerts = deriveAlerts(opsRow, benefit);
+    const health = healthScore(opsRow);
     const risks = evaluateRisks(record.id, scores, gaps, riskFlags);
     return {
       record,
@@ -52,9 +54,9 @@ function buildStatic(): StaticSite[] {
       pillars: policy.pillars, missingPillars: policy.missingPillars, coverage: policy.coverage, risks, riskCounts: riskCounts(risks), bwsRise: bwsRise(scores), riskFlags,
       pwi,
       ops: opsRow,
-      health: healthBand(opsRow.healthScore),
+      healthScore: health, alerts, health: healthBand(health),
       tierDirection: opsRow.tierChange ? tierDirection(opsRow.tierChange.from, opsRow.tierChange.to) : null,
-      offTrack: isOffTrack(opsRow, benefit.availability),
+      offTrack: isOffTrack(opsRow, benefit.availability, benefit),
     };
   });
 }
@@ -65,6 +67,8 @@ export interface Site {
   id: FactoryId; name: string; supplierId: SupplierId; supplierName: string; district: string;
   lat: number; lon: number;
   footprintI: number | null; replenishmentNeededM3: number; headcount: number; householdSize: number;
+  /** Plant attributes for technology matching: processes, effluent profile, ETP type and ETP flow (m3 per day). */
+  processes: string[]; effluentProfile: string; etpType: string; etpFlowM3PerDay: number;
   confidence: number; evidenceGrade: FactoryRecord["evidenceGrade"];
   pillars: Pillars; drivers: PillarKey[];
   /** V2 4.2: share of risk indicators with a usable reading, the pillars that dropped out, and the effect on R. */
@@ -82,6 +86,8 @@ export interface Site {
   healthScore: number; health: Health; zdhcTier: ZdhcTier;
   tierChange: OpsRecord["tierChange"]; tierDirection: TierDirection | null;
   highestAlert: Severity | null; alertMessage: string | null; alertAgeDays: number | null;
+  /** Every alert the plant's inputs raise, most severe first (the feed and the replay show the top one). */
+  alerts: DerivedAlert[];
   offTrack: boolean;
 }
 
@@ -102,14 +108,15 @@ export function getSites(scope: Scope, weights: Weights = DEFAULT_WEIGHTS): Site
     return {
       id: f.id, name: f.name, supplierId: f.supplierId, supplierName: s.supplierName, district: f.district, lat: f.lat, lon: f.lon,
       footprintI: f.footprintI, replenishmentNeededM3: f.replenishmentNeededM3, headcount: f.headcount, householdSize: f.householdSize,
+      processes: f.processes, effluentProfile: f.effluentProfile, etpType: f.etpType, etpFlowM3PerDay: f.etpFlowM3PerDay,
       confidence: s.pwi.confidence, evidenceGrade: f.evidenceGrade,
       pillars: s.pillars, drivers: topDrivers(s.pillars), riskCoverage: s.coverage, missingPillars: s.missingPillars,
       renormDelta: renormalisationDelta(s.pillars, weights, s.missingPillars), readiness: readinessShare(f.id), risks: s.risks, riskCounts: s.riskCounts, bwsRise: s.bwsRise, riskFlags: s.riskFlags,
       R: r.R, band: r.band, quadrant: r.quadrant, rank: r.rank, tier: r.tier, networkRank: n.rank, networkTier: n.tier,
       pwi: s.pwi,
-      healthScore: s.ops.healthScore, health: s.health, zdhcTier: s.ops.zdhcTier,
+      healthScore: s.healthScore, health: s.health, zdhcTier: s.ops.zdhcTier, alerts: s.alerts,
       tierChange: s.ops.tierChange, tierDirection: s.tierDirection,
-      highestAlert: s.ops.highestAlert, alertMessage: s.ops.alertMessage, alertAgeDays: s.ops.alertAgeDays,
+      highestAlert: topAlert(s.alerts)?.severity ?? null, alertMessage: topAlert(s.alerts)?.message ?? null, alertAgeDays: topAlert(s.alerts)?.ageDays ?? null,
       offTrack: s.offTrack,
     };
   });
@@ -163,7 +170,7 @@ export const getSupplier = (scope: Scope, id: SupplierId, weights?: Weights): Su
   getSuppliers(scope, weights).find((s) => s.id === id);
 
 /** Open alerts for plants in scope. */
-export const getAlerts = (scope: Scope): Alert[] => buildAlerts(STATIC.filter((s) => canSeeFactory(scope, s.record.id)).map((s) => s.ops));
+export const getAlerts = (scope: Scope): Alert[] => buildAlerts(STATIC.filter((s) => canSeeFactory(scope, s.record.id)).map((s) => ({ factoryId: s.record.id, alerts: s.alerts })));
 
 export interface Portfolio {
   supplierCount: number; factoryCount: number;

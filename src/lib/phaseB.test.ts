@@ -74,7 +74,7 @@ describe("V2 4.2 and 6: missing-data wording and columns", () => {
     const leastReady = [...band1].sort((a, b) => a.readiness - b.readiness)[0];
     expect(sites.indexOf(leastReady)).toBeLessThan(8);
   });
-  it("Coverage is 100% for every site except F10", () => {
-    expect(sites.filter((s) => s.riskCoverage.share < 1).map((s) => s.id)).toEqual(["F10"]);
+  it("Coverage is 100% for every site except F02, F10 and F11, which are at 90%", () => {
+    expect(sites.filter((s) => s.riskCoverage.share < 1).map((s) => [s.id, s.riskCoverage.share]).sort()).toEqual([["F02", 0.9], ["F10", 0.9], ["F11", 0.9]]);
   });
 });

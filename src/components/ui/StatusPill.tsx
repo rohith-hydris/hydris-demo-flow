@@ -1,6 +1,6 @@
 import { Lock } from "lucide-react";
 import { INTERNAL_STATUS_NOTE, STATUS_BAND_LABEL } from "@/src/lib/statusCopy";
-import type { Band, CellState, StatusBand, CheckResult, Health, Period, ProjectStatus, Quadrant, ReadinessState, RiskStatus, Severity, Tier, ZdhcTier } from "@/src/lib/types";
+import type { Band, CellState, InspectionStatus, StatusBand, CheckResult, Health, Period, ProjectStatus, Quadrant, ReadinessState, RiskStatus, Severity, Tier, ZdhcTier } from "@/src/lib/types";
 
 export type Tone = "positive" | "caution" | "negative" | "high" | "neutral" | "info" | "internal";
 export type ShapeKind = "circle" | "diamond" | "triangle" | "square" | "ring" | "dash";
@@ -48,6 +48,13 @@ const riskMeta: Record<RiskStatus, Meta> = {
   Error: { tone: "negative", shape: "square" },
 };
 export const RiskPill = ({ status }: { status: RiskStatus }) => <StatusPill {...riskMeta[status]} label={status} />;
+
+const inspectionMeta: Record<InspectionStatus, Meta> = {
+  Validated: { tone: "positive", shape: "circle" },
+  "Needs review": { tone: "caution", shape: "diamond" },
+  "Rejected steps": { tone: "negative", shape: "square" },
+};
+export const InspectionPill = ({ status }: { status: InspectionStatus }) => <StatusPill {...inspectionMeta[status]} label={status} />;
 
 const cellMeta: Record<CellState, Meta> = {
   Scored: { tone: "positive", shape: "circle" },

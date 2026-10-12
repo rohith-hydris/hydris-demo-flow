@@ -5,7 +5,7 @@ import { ops } from "@/src/data/ops";
 import { projects } from "@/src/data/projects";
 import { suppliers } from "@/src/data/suppliers";
 import { pilot, technologies, type Technology } from "@/src/data/copilotScripts";
-import { projectBenefit, trustScore } from "./claims";
+import { inspectionStatus, projectBenefit, trustScore } from "./claims";
 import { evidenceChange } from "@/src/data/affected";
 import { liteFindings } from "@/src/data/opportunities";
 import { scenarios } from "@/src/data/scenarios";
@@ -16,7 +16,7 @@ import { evaluateScenario, paybackLabel, reuseInsight } from "./scenarios";
 import { fmtCellScore, fmtInt, fmtPct1, fmtScore, fmtScore3 } from "./format";
 import { priorMonthSitePwi, recycledReclaimedM3, waterBalance } from "./impact";
 import { fmtClaim } from "./measure";
-import { MATCH_WEIGHTS, matchScore } from "./match";
+import { MATCH_WEIGHTS, filterPlants, matchScore, type PlantProfile } from "./match";
 import { severityRank } from "./ops";
 import { DIMENSIONS, PILLARS, PILLAR_NAMES } from "./pwi";
 import type { Scope } from "./scope";
@@ -138,8 +138,15 @@ export function offTrackSites(ctx: TokenCtx): Site[] {
   return ctx.sites.filter((s) => s.offTrack).sort((a, b) => severityRank(a.highestAlert ?? "Info") - severityRank(b.highestAlert ?? "Info") || a.rank - b.rank);
 }
 
-export function rankedTechnologies(): (Technology & { match: number })[] {
-  return technologies.map((t) => ({ ...t, match: matchScore(t) })).sort((a, b) => b.match - a.match);
+/**
+ * Technologies ranked by match. With `plants`, only technologies at least one of them is eligible for (hard filters) are scored;
+ * the others are left out. Without, every technology is scored.
+ */
+const NUMBER_WORD = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+
+export function rankedTechnologies(plants?: readonly PlantProfile[]): (Technology & { match: number })[] {
+  const usable = plants ? technologies.filter((t) => filterPlants(t, plants).eligible.length > 0) : technologies;
+  return usable.map((t) => ({ ...t, match: matchScore(t) })).sort((a, b) => b.match - a.match);
 }
 
 function resolveParts(ctx: TokenCtx, parts: string[], path: string): string {
@@ -228,7 +235,7 @@ function resolveParts(ctx: TokenCtx, parts: string[], path: string): string {
         case "steps": return String(i.steps);
         case "passed": return String(i.passed);
         case "trust": return fmtPct1(trustScore(i));
-        case "status": return i.status;
+        case "status": return inspectionStatus(i);
         case "warns": return String(detail.filter((s) => s.result === "Warn").length);
         case "fails": return String(detail.filter((s) => s.result === "Fail").length);
         case "failStep": { const f = detail.find((s) => s.result === "Fail"); if (!f) throw new TokenError("unknown", path); return String(f.n); }
@@ -270,7 +277,11 @@ function resolveParts(ctx: TokenCtx, parts: string[], path: string): string {
       }
       throw new TokenError("unknown", path);
     case "tech": {
-      const t = rest[0] === "top" ? rankedTechnologies()[0] : rankedTechnologies().find((x) => x.id === rest[0]);
+      // The business case is for Karur Finishing Works (F04): only technologies that pass its hard filters are scored.
+      const target = ctx.sites.filter((s) => s.id === "F04");
+      const ranked = rankedTechnologies(target.length ? target : undefined);
+      if (rest[0] === "passCount") return NUMBER_WORD[ranked.length] ?? String(ranked.length);
+      const t = rest[0] === "top" ? ranked[0] : ranked.find((x) => x.id === rest[0]);
       if (!t) throw new TokenError("unknown", path);
       switch (rest[1]) {
         case "name": return t.name;

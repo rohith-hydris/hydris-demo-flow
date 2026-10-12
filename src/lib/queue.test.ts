@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { claimRows, claimSummary, inspectionRows, parseClaimsTab, parseQueueFilters, reportRows, reportStateCounts } from "./queue";
+import { inspectionStatus } from "./claims";
 import { scopeFor } from "./scope";
 
 const brand = scopeFor("brand");
@@ -116,13 +117,13 @@ describe("audit and compliance reports", () => {
 });
 
 describe("field inspections", () => {
-  it("brand: four, with the ones that need review first", () => {
+  it("brand: five, with the ones that need review or have rejected steps first", () => {
     const rows = inspectionRows(brand);
-    expect(rows.map((r) => r.inspection.id)).toEqual(["INS-0412", "INS-0399", "INS-0408", "INS-0415"]);
-    expect(rows.map((r) => r.inspection.status)).toEqual(["Needs review", "Needs review", "Validated", "Validated"]);
+    expect(rows.map((r) => r.inspection.id)).toEqual(["INS-0412", "INS-0418", "INS-0399", "INS-0408", "INS-0415"]);
+    expect(rows.map((r) => inspectionStatus(r.inspection))).toEqual(["Needs review", "Rejected steps", "Needs review", "Validated", "Validated"]);
   });
-  it("supplier: INS-0412 and INS-0415 (a field upload)", () => {
-    expect(inspectionRows(supplier).map((r) => r.inspection.id)).toEqual(["INS-0412", "INS-0415"]);
+  it("supplier: INS-0412, INS-0418 and INS-0415 (a field upload)", () => {
+    expect(inspectionRows(supplier).map((r) => r.inspection.id)).toEqual(["INS-0412", "INS-0418", "INS-0415"]);
   });
   it("filters by status and factory", () => {
     expect(inspectionRows(brand, { status: "Validated" }).map((r) => r.inspection.id)).toEqual(["INS-0408", "INS-0415"]);

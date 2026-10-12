@@ -3,7 +3,7 @@ import { inspections } from "@/src/data/inspections";
 import { projects } from "@/src/data/projects";
 import type { DocumentRecord, InspectionRecord, ProjectRecord } from "@/src/data/types";
 import { fmtInt, fmtM3, fmtPeople } from "./format";
-import { PROJECT_STATUSES, acceptedShare, projectBenefit, statusCounts, totalsByUnit, trustScore, type ProjectBenefit } from "./claims";
+import { PROJECT_STATUSES, acceptedShare, projectBenefit, statusCounts, totalsByUnit, inspectionStatus, trustScore, type ProjectBenefit } from "./claims";
 import { canSeeFactory, type Scope } from "./scope";
 import { getSites, type Site } from "./selectors";
 import type { CellGrade, ProjectStatus } from "./types";
@@ -20,7 +20,7 @@ export const parseClaimsTab = (v: string | null | undefined): ClaimsTab => CLAIM
 
 export interface QueueFilters {
   supplierId?: string; factoryId?: string;
-  /** A project status on the claims tab, a readiness state on reports, Validated or Needs review on inspections. */
+  /** A project status on the claims tab, a readiness state on reports, Validated, Needs review or Rejected steps on inspections. */
   status?: string;
   pillar?: "P2" | "P3"; grade?: CellGrade;
 }
@@ -120,9 +120,9 @@ export function inspectionRows(scope: Scope, f: QueueFilters = {}): InspectionRo
   return inspections
     .filter((i) => canSeeFactory(scope, i.factoryId))
     .filter((i) => inFilter(sites.get(i.factoryId)!, f))
-    .filter((i) => !f.status || i.status === f.status)
+    .filter((i) => !f.status || inspectionStatus(i) === f.status)
     .map((inspection) => ({ inspection, site: sites.get(inspection.factoryId)!, trust: trustScore(inspection) }))
-    .sort((a, b) => Number(a.inspection.status === "Validated") - Number(b.inspection.status === "Validated") || a.site.rank - b.site.rank);
+    .sort((a, b) => Number(inspectionStatus(a.inspection) === "Validated") - Number(inspectionStatus(b.inspection) === "Validated") || a.site.rank - b.site.rank);
 }
 
 export const CLAIM_STATUSES = PROJECT_STATUSES;

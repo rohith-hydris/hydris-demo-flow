@@ -95,7 +95,7 @@ describe("references between datasets", () => {
     expect(ledger.find((l) => l.id === "LE-1880")).toMatchObject({ entryStatus: "Audited", periodStatus: "Locked" });
   });
 
-  it("the inspections are INS-0412 (F12), INS-0408 (F01), INS-0399 (F06) and, from V2 14, INS-0415 (F13)", () => {
-    expect(inspections.map((i) => [i.id, i.factoryId])).toEqual([["INS-0412", "F12"], ["INS-0408", "F01"], ["INS-0399", "F06"], ["INS-0415", "F13"]]);
+  it("the inspections are INS-0412 (F12), INS-0408 (F01), INS-0399 (F06) INS-0415 (F13, V2 14) and INS-0418 (F14, B8)", () => {
+    expect(inspections.map((i) => [i.id, i.factoryId])).toEqual([["INS-0412", "F12"], ["INS-0408", "F01"], ["INS-0399", "F06"], ["INS-0415", "F13"], ["INS-0418", "F14"]]);
   });
 });

@@ -153,7 +153,7 @@ export const scripts: ScriptDef[] = [
     match: [["technology", "karur"], ["tech", "karur"], ["technology", "fit"], ["which", "technology"]],
     tools: ["match_technology"], requiresSite: "F04",
     blocks: [
-      { kind: "text", text: "Three technologies pass the hard filters for **{{site.F04.name}}**. Match is {{match.weights}}." },
+      { kind: "text", text: "{{tech.passCount}} technologies pass the hard filters for **{{site.F04.name}}**. Match is {{match.weights}}." },
       { kind: "techTable" },
       { kind: "citations", items: [{ label: "Module 06 · Technology match" }, { label: "Illustrative scores" }] },
       {
@@ -376,12 +376,24 @@ export const validationTargets: Record<string, ScriptId> = {
 };
 
 // ---- C6 data: technology match (PRODUCT 7, C6). Scores are illustrative; Match is computed in src/lib/match.ts ----------
-export interface Technology { id: string; name: string; technicalFit: number; expectedBenefit: number; operationalStability: number; dataQuality: number; nearMissOn?: string }
+/**
+ * A technology and the plants it can be applied to. The hard filters (src/lib/match.ts filterPlants) test a plant against
+ * `processes`, `effluentProfiles`, `etpTypes` and the flow range `minFlowM3` to `maxFlowM3` (m3 per day) before any score is computed.
+ * The four scores are illustrative.
+ */
+export interface Technology {
+  id: string; name: string;
+  processes: string[]; effluentProfiles: string[]; etpTypes: string[]; minFlowM3: number; maxFlowM3: number;
+  technicalFit: number; expectedBenefit: number; operationalStability: number; dataQuality: number; nearMissOn?: string;
+}
 
 export const technologies: Technology[] = [
-  { id: "tertiary", name: "Hydris tertiary polishing module", technicalFit: 0.9, expectedBenefit: 0.8, operationalStability: 0.6, dataQuality: 0.8 },
-  { id: "ec", name: "Electrocoagulation retrofit", technicalFit: 0.8, expectedBenefit: 0.7, operationalStability: 0.6, dataQuality: 0.8 },
-  { id: "mbr", name: "Membrane bioreactor upgrade", technicalFit: 0.7, expectedBenefit: 0.85, operationalStability: 0.4, dataQuality: 0.8, nearMissOn: "stability" },
+  { id: "tertiary", name: "Hydris tertiary polishing module", processes: ["Dyeing", "Washing", "Finishing"], effluentProfiles: ["Reactive dye", "Indigo / denim wash", "Mixed wet processing"],
+    etpTypes: ["Biological + tertiary", "Primary + biological"], minFlowM3: 200, maxFlowM3: 700, technicalFit: 0.9, expectedBenefit: 0.8, operationalStability: 0.6, dataQuality: 0.8 },
+  { id: "ec", name: "Electrocoagulation retrofit", processes: ["Dyeing", "Finishing"], effluentProfiles: ["Reactive dye", "Mixed wet processing"],
+    etpTypes: ["Primary + biological", "Biological + tertiary"], minFlowM3: 150, maxFlowM3: 600, technicalFit: 0.8, expectedBenefit: 0.7, operationalStability: 0.6, dataQuality: 0.8 },
+  { id: "mbr", name: "Membrane bioreactor upgrade", processes: ["Knitting", "Dyeing", "Washing", "Finishing"], effluentProfiles: ["Reactive dye", "Indigo / denim wash", "Mixed wet processing", "Light wash"],
+    etpTypes: ["Primary + biological", "Biological + tertiary", "Primary only"], minFlowM3: 100, maxFlowM3: 900, technicalFit: 0.7, expectedBenefit: 0.85, operationalStability: 0.4, dataQuality: 0.8, nearMissOn: "stability" },
 ];
 
 /** The "prove-and-scale" business case (C6 button). TN removal improvements are illustrative pilot data, in percentage points. */

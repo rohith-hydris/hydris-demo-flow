@@ -33,7 +33,7 @@ describe("KPI strips (PRODUCT 4.2, DESIGN 5.2)", () => {
   it("supplier detail totals for Kongu Knit Processing: R 0.66, counted PWI 59.4% / 51.3% (central 64.2% / 58.5%), RN 280,000", () => {
     const k = supplierKpis(getSupplier(scopeFor("brand"), "SUP1")!);
     const get = (label: string) => k.find((x) => x.label.startsWith(label))!;
-    expect(get("Average risk").value).toBe("0.66");
+    expect(get("Average risk").value).toBe("0.65"); // 0.66 before F02 lost its groundwater reading (issue C1)
     expect(get("PWI")).toMatchObject({ value: "59.4%", extra: [{ label: "RN-weighted, counted", value: "51.3%" }, { label: "Central", value: "64.2% / 58.5%" }] });
     expect(get("Replenishment").value).toBe("280,000");
     expect(get("Average plant health").value).toBe(77); // (78 + 61 + 91) / 3 = 76.67

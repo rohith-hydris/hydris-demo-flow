@@ -29,7 +29,8 @@ export type LedgerStatus = "Validated" | "Audited";
 
 export type ProjectStatus = "Validated" | "Pending validation" | "Flagged" | "Not counted";
 export type ReadinessState = "Ready" | "Missing" | "Failed check" | "Expired / out of period" | "Low confidence";
-export type InspectionStatus = "Needs review" | "Validated";
+/** Derived in src/lib/claims.ts inspectionStatus from the steps and the review log. "Rejected steps": a retake was requested. */
+export type InspectionStatus = "Needs review" | "Validated" | "Rejected steps";
 export type CheckResult = "Pass" | "Warn" | "Fail";
 
 // ---- V2 addendum vocabularies -----------------------------------------------------------------------------------------

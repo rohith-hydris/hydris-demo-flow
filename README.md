@@ -40,7 +40,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 All data is hardcoded and illustrative. The demo uses replay and manual data, not live data. Source: V2 addendum Section 16.
 
 1. **Brand, Portfolio:** Coromandel Denim Mills has the highest risk (average R 0.75). In the alerts feed, press Play on the replay pack (labelled "Replay data (demonstration)") and watch F06, F02 and F13 fire on days 4, 5 and 6.
-2. **Ranking:** Ambattur Denim Unit is first. Show the missing-data coverage column (F10 at 90%).
+2. **Ranking:** Ambattur Denim Unit is first. Show the missing-data coverage column: F02, F10 and F11 are at 90%. Avinashi Road Dye House (F02) has no groundwater reading, so its whole groundwater pillar drops out, the other weights renormalise and R moves from 0.71 to 0.69; open its Risk tab to see the signed effect (it reads raised R by 0.01) and that renormalisation can raise or lower R. Vellore Fabrics (F11) has no riverine flood reading, so its flood pillar falls from 0.30 to 0.20 and R from 0.38 to 0.37 (demo estimate: its coastal flood score is set to 1.0). Rank, band and tier do not move.
 3. **Factory F12, Risk tab:** gaps remain at the basin level. The journey strip under the header links the whole story.
 4. **Projects > Opportunities:** import LITE-0187 and LITE-0188; import again to show "Already imported. No duplicate created." (Or ask the Copilot: "Import the Lite findings for Ambattur".)
 5. **Projects > Catalogue:** gates come before scores; OPP-G is ineligible despite scoring 4.45.

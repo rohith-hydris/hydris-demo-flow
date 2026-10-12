@@ -7,6 +7,7 @@ import { buildAnswer, copilotScope, interpretText, type ResolvedBlock } from "./
 import { importMany, initialImports } from "./catalogue";
 import { JOURNEY_STEPS } from "./journey";
 import { eventsOn, eventsUpTo } from "./replay";
+import { inspectionStatus } from "./claims";
 import { inspectionRows } from "./queue";
 import { scopeFor } from "./scope";
 import { makeTokenCtx } from "./tokens";
@@ -32,14 +33,15 @@ describe("V2 14: replay pack", () => {
 describe("V2 14: field inspections have a source", () => {
   it("INS-0415 is a field upload at F13, 9 steps, Validated, trust 100%", () => {
     const i = inspections.find((x) => x.id === "INS-0415")!;
-    expect(i).toMatchObject({ factoryId: "F13", date: "5 Oct 2026", steps: 9, status: "Validated", source: "Field upload (phone or web)" });
+    expect(i).toMatchObject({ factoryId: "F13", date: "5 Oct 2026", steps: 9, source: "Field upload (phone or web)" });
+    expect(inspectionStatus(i)).toBe("Validated");
     const row = inspectionRows(scopeFor("brand")).find((r) => r.inspection.id === "INS-0415")!;
     expect(row.trust).toBe(1);
   });
   it("the others come from Field Glasses, and a supplier sees only its own reports", () => {
     expect(inspections.filter((i) => i.id !== "INS-0415").every((i) => i.source === "Field Glasses")).toBe(true);
     const ids = inspectionRows(scopeFor("supplier")).map((r) => r.inspection.id).sort();
-    expect(ids).toEqual(["INS-0412", "INS-0415"]);
+    expect(ids).toEqual(["INS-0412", "INS-0415", "INS-0418"]);
   });
 });
 

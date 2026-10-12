@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { FileCheck2, FileText, Sparkles, Upload } from "lucide-react";
 import type { DocumentRecord, InspectionRecord } from "@/src/data/types";
-import { documentsForFactory, inspectionsFor, READINESS_STATES, readinessCounts, trustScore } from "@/src/lib/claims";
+import { documentsForFactory, inspectionStatus, inspectionsFor, READINESS_STATES, readinessCounts, trustScore } from "@/src/lib/claims";
 import type { Site } from "@/src/lib/selectors";
 import { inspectionStates, reportStates } from "@/src/lib/states";
-import { ReadinessPill, Shape, StateStrip, StatusPill, readinessMeta } from "@/src/components/ui";
+import { InspectionPill, ReadinessPill, Shape, StateStrip, StatusPill, readinessMeta } from "@/src/components/ui";
+import { ReviewLog } from "./InspectionReview";
 import AffectedOutputsPanel from "./AffectedOutputsPanel";
 import MockAction from "./MockAction";
 import TrustRing from "./TrustRing";
@@ -48,15 +49,17 @@ function ReportRow({ d, canValidate }: { d: DocumentRecord; canValidate: boolean
 
 function InspectionRow({ i, canValidate }: { i: InspectionRecord; canValidate: boolean }) {
   const score = trustScore(i);
-  const ok = i.status === "Validated";
+  const status = inspectionStatus(i);
+  const ok = status === "Validated";
   return (
     <li className="flex flex-wrap items-center gap-4 py-3 first:pt-0 last:pb-0">
       <TrustRing value={score} ok={ok} />
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-ink-900">{i.id} <span className="font-normal text-ink-500">· {i.date}</span></p>
         <p className="text-sm text-ink-500">{i.passed} of {i.steps} steps passed · Source: {i.source}</p>
-        <StateStrip states={inspectionStates(i.status)} className="mt-1.5" />
-        <div className="mt-1.5">{ok ? <StatusPill tone="positive" shape="circle" label="Validated" /> : <StatusPill tone="caution" shape="diamond" label="Needs review" />}</div>
+        <StateStrip states={inspectionStates(status)} className="mt-1.5" />
+        <div className="mt-1.5"><InspectionPill status={status} /></div>
+        <ReviewLog inspection={i} />
       </div>
       {canValidate ? (
         <Link href={`/copilot?agent=validation&inspection=${i.id}`} className="btn btn-secondary min-h-11 px-4 text-sm"><Sparkles className="size-4" aria-hidden="true" /> Validate with agent</Link>

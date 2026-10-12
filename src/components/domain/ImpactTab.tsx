@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { additionalityGate, projectBenefit } from "@/src/lib/claims";
 import { fmtInt, fmtPct1, fmtScore, fmtScore3 } from "@/src/lib/format";
+import { guideComparison } from "@/src/lib/guide";
 import { GUIDE_CAPTION, METHOD_VERSION, guideDetail, ledgerFor, priorMonthSitePwi, sitePwiChange } from "@/src/lib/impact";
 import { fmtClaim } from "@/src/lib/measure";
 import type { Site } from "@/src/lib/selectors";
@@ -34,6 +35,7 @@ export default function ImpactTab({ site }: { site: Site }) {
   const pwi = site.pwi;
   const guide = pwi.guide;
   const detail = guideDetail(site.id);
+  const comparison = guideComparison(pwi);
   const guideOn = method === "guide" && guide !== null;
   const shown = guideOn ? guide.sitePwi : pwi.sitePwi;
 
@@ -93,6 +95,35 @@ export default function ImpactTab({ site }: { site: Site }) {
               <p className="mt-1 text-sm text-ink-500">
                 {GUIDE_CAPTION}
               </p>
+              {comparison && (
+                <details className="mt-3 rounded-tile border border-line bg-card p-3 text-sm">
+                  <summary className="min-h-11 cursor-pointer py-2 font-semibold text-blue-600">How the twelve Guide rows differ</summary>
+                  <p className="mt-1 text-ink-500">
+                    All twelve rows on the Guide formulas give a site PWI of <span className="num font-semibold text-ink-700">{fmtPct1(comparison.guideSitePwi)}</span> against{" "}
+                    <span className="num font-semibold text-ink-700">{fmtPct1(comparison.pwimSitePwi)}</span> for {METHOD_VERSION} (central). Each row&apos;s effect below is that row alone.
+                    Row 6 alone gives the Guide-compatible figure above. Some Guide inputs are assumptions: see the notes in the code. A comparison, not a result.
+                  </p>
+                  <div className="mt-2 overflow-x-auto">
+                    <table className="w-full text-left">
+                      <caption className="sr-only">The twelve Guide-compatible formulas against PWI-M 1.0</caption>
+                      <thead><tr className="bg-blue-50 text-ink-700">
+                        <th scope="col" className="px-2 py-2 font-semibold">Row</th><th scope="col" className="px-2 py-2 font-semibold">Guide</th>
+                        <th scope="col" className="px-2 py-2 font-semibold">{METHOD_VERSION}</th><th scope="col" className="px-2 py-2 text-right font-semibold">Effect on site PWI</th>
+                      </tr></thead>
+                      <tbody>
+                        {comparison.rows.map((r) => (
+                          <tr key={r.n} className="border-t border-line align-top">
+                            <th scope="row" className="px-2 py-2 font-semibold text-ink-900">{r.n}. {r.topic}<span className="block text-xs font-normal text-ink-500">{r.note}</span></th>
+                            <td className="num px-2 py-2 text-ink-700">{r.guide}</td>
+                            <td className="num px-2 py-2 text-ink-700">{r.pwim}</td>
+                            <td className="num px-2 py-2 text-right text-ink-900">{r.effectOnSitePwi === null ? "Not a site figure" : `${r.effectOnSitePwi >= 0 ? "+" : "−"}${Math.abs(r.effectOnSitePwi * 100).toFixed(1)} points`}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              )}
               {guideOn && detail && (
                 <p className="mt-2 rounded-tile bg-blue-50 p-3 text-sm text-ink-700">
                   The Guide scores P1 Quality as 1.00 because {fmtInt(detail.removedKg)} of {fmtInt(detail.totalKg)} kg removed is {fmtPct1(detail.massShare)} in total.

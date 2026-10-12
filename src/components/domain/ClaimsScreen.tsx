@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FileCheck2, Sparkles, Upload } from "lucide-react";
 import { useRole, useScope } from "@/src/context/RoleContext";
 import { suppliers } from "@/src/data/suppliers";
-import { READINESS_STATES, attributionNote, displayNote } from "@/src/lib/claims";
+import { READINESS_STATES, attributionNote, displayNote, inspectionStatus } from "@/src/lib/claims";
 import { fmtPct1 } from "@/src/lib/format";
 import { claimNote, fmtClaim } from "@/src/lib/measure";
 import {
@@ -14,9 +14,10 @@ import {
 } from "@/src/lib/queue";
 import { getSites } from "@/src/lib/selectors";
 import {
-  AppMain, CitationChip, EmptyState, PageHeader, ProjectStatusPill, ReadinessPill, ScoreBar, SelectControl, StateStrip, StatusPill, Tabs, tabIds, projectStatusMeta,
+  AppMain, CitationChip, EmptyState, InspectionPill, PageHeader, ProjectStatusPill, ReadinessPill, ScoreBar, SelectControl, StateStrip, StatusPill, Tabs, tabIds, projectStatusMeta,
 } from "@/src/components/ui";
 import { reportStates, inspectionStates, summaryStatus } from "@/src/lib/states";
+import { InspectionActions, ReviewLog } from "./InspectionReview";
 import MockAction from "./MockAction";
 import ProjectDrawerButton from "./ProjectDrawer";
 import TrustRing from "./TrustRing";
@@ -101,8 +102,11 @@ function ReportItem({ row, canValidate }: { row: ReportRow; canValidate: boolean
 }
 
 function InspectionItem({ row, canValidate }: { row: InspectionRow; canValidate: boolean }) {
-  const { inspection: i, site, trust } = row;
-  const ok = i.status === "Validated";
+  const { site, trust } = row;
+  // The review log is local state in this demo: actions change what this item shows, nothing is saved.
+  const [i, setI] = useState(row.inspection);
+  const status = inspectionStatus(i);
+  const ok = status === "Validated";
   return (
     <li className="card p-4">
       <div className="grid items-center gap-x-5 gap-y-3 lg:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_auto_auto]">
@@ -110,17 +114,21 @@ function InspectionItem({ row, canValidate }: { row: InspectionRow; canValidate:
         <div>
           <h4>{i.id}</h4>
           <p className="text-sm text-ink-500">{i.date} · {i.passed} of {i.steps} steps passed</p>
-          <StateStrip states={inspectionStates(i.status)} className="mt-1.5" />
+          <StateStrip states={inspectionStates(status)} className="mt-1.5" />
+          <ReviewLog inspection={i} />
         </div>
         <div className="min-w-0">
           <Link href={`/factories/${site.id}?tab=evidence`} className="block font-semibold text-ink-900 hover:underline">{site.name}</Link>
           <span className="block text-sm text-ink-500">{site.supplierName}</span>
         </div>
         <div className="min-w-0"><span className="block text-sm text-ink-500">Source</span><span className="block font-semibold text-ink-900">{i.source}</span></div>
-        {ok ? <StatusPill tone="positive" shape="circle" label="Validated" /> : <StatusPill tone="caution" shape="diamond" label="Needs review" />}
+        <InspectionPill status={status} />
         <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
           {canValidate ? (
-            <Link href={`/copilot?agent=validation&inspection=${i.id}`} className="btn btn-secondary min-h-11 px-4 text-sm"><Sparkles className="size-4" aria-hidden="true" /> Validate with agent</Link>
+            <>
+              <Link href={`/copilot?agent=validation&inspection=${i.id}`} className="btn btn-secondary min-h-11 px-4 text-sm"><Sparkles className="size-4" aria-hidden="true" /> Validate with agent</Link>
+              <InspectionActions inspection={i} onChange={setI} />
+            </>
           ) : (
             <MockAction label="Request review" done="Review requested (demo)" icon={FileCheck2} />
           )}
@@ -167,7 +175,7 @@ export default function ClaimsScreen() {
   const statusOptions =
     tab === "claims" ? CLAIM_STATUSES.map((s) => ({ value: s, label: s }))
     : tab === "reports" ? READINESS_STATES.map((s) => ({ value: s, label: s }))
-    : [{ value: "Needs review", label: "Needs review" }, { value: "Validated", label: "Validated" }];
+    : [{ value: "Needs review", label: "Needs review" }, { value: "Rejected steps", label: "Rejected steps" }, { value: "Validated", label: "Validated" }];
   const count = tab === "claims" ? claims.length : tab === "reports" ? reports.length : inspectionsList.length;
   const ids = tabIds(ID_PREFIX, tab);
   const visibleReports = showAll ? reports : reports.slice(0, REPORTS_COLLAPSED);

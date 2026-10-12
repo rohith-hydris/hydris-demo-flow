@@ -9,7 +9,7 @@ import { projects } from "@/src/data/projects";
 import { suppliers } from "@/src/data/suppliers";
 import { SUPPLIER_TENANT } from "@/src/data/tenants";
 import type { DocumentRecord, InspectionStep } from "@/src/data/types";
-import { documentsForFactory, readinessCounts, trustScore } from "./claims";
+import { documentsForFactory, inspectionStatus, readinessCounts, trustScore } from "./claims";
 import { affectedOutputs, fmtBefore, fmtStateNow } from "./affected";
 import { fmtDaysAgo, fmtScore } from "./format";
 import { waterBalance } from "./impact";
@@ -17,6 +17,8 @@ import { PILLAR_NAMES, DIMENSIONS, PILLARS } from "./pwi";
 import type { Role } from "./roles";
 import { OUT_OF_SCOPE_REPLY, VALIDATION_BRAND_ONLY_REPLY, scopeFor, type Scope } from "./scope";
 import { GRADE_MEANING, traceLedgerEntry, type Trace } from "./trace";
+import { technologies } from "@/src/data/copilotScripts";
+import { filterPlants } from "./match";
 import { fillTokens, liteOutcomes, makeTokenCtx, offTrackSites, rankedTechnologies, tokensIn, type CopilotScope, type TokenCtx } from "./tokens";
 import type { Band, Dimension, Pillar, Quadrant, ReadinessState, Severity, Tier } from "./types";
 import { severityRank } from "./ops";
@@ -208,7 +210,7 @@ export type ResolvedBlock =
   | { kind: "avgGrid"; cells: { pillar: Pillar; dimension: Dimension; score: number }[]; weakest: string[] }
   | { kind: "table"; columns: string[]; rows: string[][] }
   | { kind: "offTrack"; groups: { supplier: string; plants: { id: string; name: string; severity: Severity; message: string; age: string | null }[] }[] }
-  | { kind: "techTable"; weights: string; rows: { name: string; technicalFit: string; expectedBenefit: string; stability: string; dataQuality: string; match: string; note: string | null; top: boolean }[] }
+  | { kind: "techTable"; weights: string; passed: number; of: number; nearMisses: { technology: string; plant: string; reason: string; detail: string }[]; rows: { name: string; technicalFit: string; expectedBenefit: string; stability: string; dataQuality: string; match: string; note: string | null; top: boolean }[] }
   | { kind: "checklist"; title: string; checks: { name: string; result: "Pass" | "Warn" | "Fail"; reason?: string }[]; verdict: { label: string; tone: "negative" | "caution" | "positive" | "neutral"; effect: string }; stateEffects: StateEffect[]; closing: string }
   | { kind: "affected"; rows: { label: string; before: string; state: string; tone: "positive" | "caution" | "neutral" }[] }
   | { kind: "liteImport"; rows: { findingId: string; finding: string; opportunityId: string; created: boolean }[] }
@@ -345,9 +347,13 @@ function buildBlock(spec: BlockSpec, ctx: TokenCtx): ResolvedBlock | null {
       return { kind: "offTrack", groups };
     }
     case "techTable": {
-      const ranked = rankedTechnologies();
+      // Hard filters first: only technologies the target plant (F04) is eligible for are scored. Near misses across the plants in scope
+      // (one failed filter) are listed with their blocker and are not scored.
+      const target = ctx.sites.filter((s) => s.id === "F04");
+      const ranked = rankedTechnologies(target.length ? target : undefined);
+      const nearMisses = technologies.flatMap((t) => filterPlants(t, ctx.sites).nearMisses.map((m) => ({ technology: t.name, plant: m.plant.name, reason: m.blocker.reason, detail: m.blocker.detail })));
       return {
-        kind: "techTable", weights: fillTokens("{{match.weights}}", ctx),
+        kind: "techTable", weights: fillTokens("{{match.weights}}", ctx), passed: ranked.length, of: technologies.length, nearMisses,
         rows: ranked.map((t, i) => ({
           name: t.name, technicalFit: fmtScore(t.technicalFit), expectedBenefit: fmtScore(t.expectedBenefit), stability: fmtScore(t.operationalStability),
           dataQuality: fmtScore(t.dataQuality), match: fmtScore(t.match), note: t.nearMissOn ? `near miss: ${t.nearMissOn}` : null, top: i === 0,
@@ -367,7 +373,7 @@ function buildBlock(spec: BlockSpec, ctx: TokenCtx): ResolvedBlock | null {
       const detail = i.stepDetail ?? [];
       const site = ctx.sites.find((s) => s.id === i.factoryId)!;
       return {
-        kind: "inspection", stateEffects: stateEffects(spec.states, null), closing: VERDICT_CLOSING, id: i.id, factory: site.name, date: i.date, steps: i.steps, passed: i.passed, trust: trustScore(i), status: i.status,
+        kind: "inspection", stateEffects: stateEffects(spec.states, null), closing: VERDICT_CLOSING, id: i.id, factory: site.name, date: i.date, steps: i.steps, passed: i.passed, trust: trustScore(i), status: inspectionStatus(i),
         counts: { pass: i.passed, warn: detail.filter((s) => s.result === "Warn").length, fail: detail.filter((s) => s.result === "Fail").length },
         nonPass: detail, layers: LAYERS,
       };

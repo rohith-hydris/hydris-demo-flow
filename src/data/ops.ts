@@ -1,20 +1,24 @@
 import type { OpsRecord } from "./types";
 
-// PRODUCT 5.7 (Module 06). Health band, off-track and the alert list are computed in src/lib/ops.ts.
-// `alertAgeDays` is filled only where the spec states an age; otherwise null.
+// PRODUCT 5.7 (Module 06): the plant signals as INPUTS. Health score, health band, alerts, severity and off-track are all derived in
+// src/lib/ops.ts (healthScore, deriveAlerts, isOffTrack); nothing derived is stored here.
+// Seeded so every site keeps its PRODUCT 5.7 health band, health score and highest alert severity. Illustrative.
+//  - outletCompliancePct: share of outlet readings within consent limits. uptimePct: monitoring uptime (OCEMS and meters).
+//  - dataAgeDays: days since the last reading; 7 or more is a data gap (F06 OCEMS offline 9 days, F13 water meter log 9 days).
+//  - benefitBehindAlert: the plant tracks "benefit behind target" from its pro-rated benefit shares (issue A3).
 export const ops: OpsRecord[] = [
-  { factoryId: "F01", healthScore: 78, zdhcTier: "Progressive", tierChange: null, highestAlert: "Medium", alertMessage: null, benefitBehindAlert: true, alertAgeDays: null },
-  { factoryId: "F02", healthScore: 61, zdhcTier: "Foundational", tierChange: { from: "Progressive", to: "Foundational", daysAgo: 12 }, highestAlert: "High", alertMessage: "ZDHC downgrade and TSS above limit on 3 of last 7 days", alertAgeDays: 12 },
-  { factoryId: "F03", healthScore: 91, zdhcTier: "Aspirational", tierChange: { from: "Progressive", to: "Aspirational", daysAgo: 20 }, highestAlert: "Info", alertMessage: "ZDHC upgrade to Aspirational", alertAgeDays: 20 },
-  { factoryId: "F04", healthScore: 72, zdhcTier: "Progressive", tierChange: null, highestAlert: "Medium", alertMessage: "Plant health in Watch range", alertAgeDays: null },
-  { factoryId: "F05", healthScore: 84, zdhcTier: "Progressive", tierChange: null, highestAlert: null, alertMessage: null, alertAgeDays: null },
-  { factoryId: "F06", healthScore: 38, zdhcTier: "Not conformant", tierChange: { from: "Foundational", to: "Not conformant", daysAgo: 5 }, highestAlert: "Critical", alertMessage: "Dropped to Not conformant; OCEMS offline 9 days", alertAgeDays: 5 },
-  { factoryId: "F07", healthScore: 93, zdhcTier: "Aspirational", tierChange: null, highestAlert: null, alertMessage: null, alertAgeDays: null },
-  { factoryId: "F08", healthScore: 96, zdhcTier: "Aspirational", tierChange: null, highestAlert: null, alertMessage: null, alertAgeDays: null },
-  { factoryId: "F09", healthScore: 66, zdhcTier: "Foundational", tierChange: null, highestAlert: "Medium", alertMessage: "Plant health in Watch range", alertAgeDays: null },
-  { factoryId: "F10", healthScore: 79, zdhcTier: "Progressive", tierChange: null, highestAlert: null, alertMessage: null, alertAgeDays: null },
-  { factoryId: "F11", healthScore: 90, zdhcTier: "Aspirational", tierChange: { from: "Progressive", to: "Aspirational", daysAgo: 31 }, highestAlert: "Info", alertMessage: "ZDHC upgrade to Aspirational", alertAgeDays: 31 },
-  { factoryId: "F12", healthScore: 81, zdhcTier: "Progressive", tierChange: null, highestAlert: "Medium", alertMessage: "PRJ-105 monitoring check 62 days overdue", benefitBehindAlert: true, alertAgeDays: null },
-  { factoryId: "F13", healthScore: 55, zdhcTier: "Foundational", tierChange: null, highestAlert: "High", alertMessage: "No data for 9 days (water meter log)", alertAgeDays: 9 },
-  { factoryId: "F14", healthScore: 83, zdhcTier: "Progressive", tierChange: null, highestAlert: null, alertMessage: null, alertAgeDays: null },
+  { factoryId: "F01", outletCompliancePct: 64.2, uptimePct: 98, dataAgeDays: 0, zdhcTier: "Progressive", tierChange: null, benefitBehindAlert: true },
+  { factoryId: "F02", outletCompliancePct: 38.3, uptimePct: 94, dataAgeDays: 1, zdhcTier: "Foundational", tierChange: { from: "Progressive", to: "Foundational", daysAgo: 12 } },
+  { factoryId: "F03", outletCompliancePct: 85.4, uptimePct: 99, dataAgeDays: 0, zdhcTier: "Aspirational", tierChange: { from: "Progressive", to: "Aspirational", daysAgo: 20 } },
+  { factoryId: "F04", outletCompliancePct: 57.1, uptimePct: 95, dataAgeDays: 2, zdhcTier: "Progressive", tierChange: null },
+  { factoryId: "F05", outletCompliancePct: 74.2, uptimePct: 98, dataAgeDays: 0, zdhcTier: "Progressive", tierChange: null },
+  { factoryId: "F06", outletCompliancePct: 16.7, uptimePct: 70, dataAgeDays: 9, zdhcTier: "Not conformant", tierChange: { from: "Foundational", to: "Not conformant", daysAgo: 5 } },
+  { factoryId: "F07", outletCompliancePct: 88.8, uptimePct: 99, dataAgeDays: 0, zdhcTier: "Aspirational", tierChange: null },
+  { factoryId: "F08", outletCompliancePct: 93.8, uptimePct: 99, dataAgeDays: 0, zdhcTier: "Aspirational", tierChange: null },
+  { factoryId: "F09", outletCompliancePct: 46.2, uptimePct: 95, dataAgeDays: 1, zdhcTier: "Foundational", tierChange: null },
+  { factoryId: "F10", outletCompliancePct: 67.1, uptimePct: 97, dataAgeDays: 1, zdhcTier: "Progressive", tierChange: null },
+  { factoryId: "F11", outletCompliancePct: 83.8, uptimePct: 99, dataAgeDays: 0, zdhcTier: "Aspirational", tierChange: { from: "Progressive", to: "Aspirational", daysAgo: 31 } },
+  { factoryId: "F12", outletCompliancePct: 70.0, uptimePct: 98, dataAgeDays: 1, zdhcTier: "Progressive", tierChange: null, benefitBehindAlert: true, overdueMonitoring: { project: "PRJ-105", days: 62 } },
+  { factoryId: "F13", outletCompliancePct: 45.0, uptimePct: 70, dataAgeDays: 9, zdhcTier: "Foundational", tierChange: null },
+  { factoryId: "F14", outletCompliancePct: 72.5, uptimePct: 98, dataAgeDays: 0, zdhcTier: "Progressive", tierChange: null },
 ];

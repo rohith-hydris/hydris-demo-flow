@@ -222,11 +222,12 @@ describe("the special rules leave the demo sites unchanged", () => {
     expect([by.tex.score, by.tex.compositeLabel]).toEqual([4.05, "Extremely High"]);
     expect(f.riskFlags).toMatchObject({ waterStressed: false, snappedKm: null, noAreaData: false, flaggedPillars: [] });
   });
-  it("every site's R is unchanged: no demo site carries a special rule that moves it", () => {
+  it("every site's R matches PRODUCT 5.5 except F02 and F11, which carry a missing-data gap on purpose (issue C1); no site carries a special rule", () => {
+    const WITH_GAP: Record<string, number> = { F02: 0.69, F11: 0.37 };
     for (const c of siteChecks) {
       const r = riskScores.find((x) => x.factoryId === c.id)!;
       const p = riskPillarsPolicy(r.scores, recordGaps(r), siteRiskFlags(r));
-      expect(round(riskR(p.pillars, DEFAULT_WEIGHTS, p.missingPillars), 2)).toBe(c.R);
+      expect(round(riskR(p.pillars, DEFAULT_WEIGHTS, p.missingPillars), 2)).toBe(WITH_GAP[c.id] ?? c.R);
       expect(p.flagged).toEqual([]);
     }
   });

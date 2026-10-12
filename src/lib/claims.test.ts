@@ -3,7 +3,7 @@ import { documents } from "@/src/data/documents";
 import { inspections } from "@/src/data/inspections";
 import { projects } from "@/src/data/projects";
 import {
-  additionalityGate, awaitingValidation, displayNote, documentsForFactory, projectBenefit, projectsFor, readinessCounts, statusCounts, totalsByUnit, trustScore,
+  additionalityGate, awaitingValidation, displayNote, documentsForFactory, projectBenefit, projectsFor, readinessCounts, statusCounts, totalsByUnit, trustScore, inspectionStatus, inspectionIssues, reviewInspection,
 } from "./claims";
 import { pct1 } from "./format";
 
@@ -157,16 +157,123 @@ describe("document readiness (PRODUCT 5.11)", () => {
 
 describe("field inspections (PRODUCT 5.11, script V3)", () => {
   it("trust scores are 85.7%, 100%, 66.7% and (INS-0415) 100%", () => {
-    expect(inspections.map((i) => pct1(trustScore(i)))).toEqual([85.7, 100, 66.7, 100]);
+    expect(inspections.map((i) => pct1(trustScore(i)))).toEqual([85.7, 100, 66.7, 100, 80]);
   });
 
   it("INS-0412 has one Fail (step 9, VC-06) and one Warn (step 11, VC-21); 12 of 14 steps passed", () => {
     const i = inspections.find((x) => x.id === "INS-0412")!;
-    expect([i.passed, i.steps, i.status]).toEqual([12, 14, "Needs review"]);
+    expect([i.passed, i.steps, inspectionStatus(i)]).toEqual([12, 14, "Needs review"]);
     expect(i.stepDetail!.map((s) => [s.n, s.result, s.check])).toEqual([[9, "Fail", "VC-06"], [11, "Warn", "VC-21"]]);
   });
 
-  it("statuses: INS-0408 Validated; INS-0399 Needs review", () => {
-    expect(inspections.map((i) => i.status)).toEqual(["Needs review", "Validated", "Needs review", "Validated"]);
+  it("statuses are derived: INS-0408 Validated; INS-0399 and INS-0412 Needs review; INS-0418 Rejected steps", () => {
+    expect(inspections.map((i) => [i.id, inspectionStatus(i)])).toEqual([
+      ["INS-0412", "Needs review"], ["INS-0408", "Validated"], ["INS-0399", "Needs review"], ["INS-0415", "Validated"], ["INS-0418", "Rejected steps"],
+    ]);
+  });
+});
+
+// ---- B8: inspection report states ----------------------------------------------------------------------------------------------
+
+describe("inspection status is derived from the steps and the review log (issue B8)", () => {
+  const base = { id: "INS-T", factoryId: "F12", date: "1 Oct 2026", source: "Field Glasses" as const };
+  const clean = { ...base, steps: 10, passed: 10 };
+  const withFail = {
+    ...base, steps: 10, passed: 9,
+    stepDetail: [{ n: 4, instruction: "Photograph the outlet", result: "Fail" as const, check: "VC-06", reason: "Blurry." }],
+  };
+  const withWarn = {
+    ...base, steps: 10, passed: 9,
+    stepDetail: [{ n: 7, instruction: "Read the meter", result: "Warn" as const, check: "VC-21", reason: "Far from history." }],
+  };
+  const reviewer = { user: "R. Menon", time: "7 Oct 2026, 09:40" };
+
+  it("every step passed: Validated", () => {
+    expect(inspectionStatus(clean)).toBe("Validated");
+    expect(inspectionIssues(clean)).toEqual({ fails: 0, warns: 0, unresolved: 0 });
+  });
+
+  it("any Fail makes Needs review", () => {
+    expect(inspectionStatus(withFail)).toBe("Needs review");
+    expect(inspectionIssues(withFail)).toEqual({ fails: 1, warns: 0, unresolved: 0 });
+  });
+
+  it("a Warn alone needs review too, and steps that did not pass with no detail count as unresolved", () => {
+    expect(inspectionStatus(withWarn)).toBe("Needs review");
+    const noDetail = { ...base, steps: 15, passed: 10 };
+    expect(inspectionIssues(noDetail)).toEqual({ fails: 0, warns: 0, unresolved: 5 });
+    expect(inspectionStatus(noDetail)).toBe("Needs review");
+  });
+
+  it("override with a reason: Needs review becomes Validated, and the reason, user and time are logged", () => {
+    const r = reviewInspection(withFail, { action: "override", ...reviewer, reason: "  Plant lead confirmed by call.  " });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(inspectionStatus(r.inspection)).toBe("Validated");
+    expect(r.inspection.reviewLog).toEqual([{ action: "override", user: "R. Menon", time: "7 Oct 2026, 09:40", reason: "Plant lead confirmed by call." }]);
+    expect(withFail).not.toHaveProperty("reviewLog"); // the input is not changed
+  });
+
+  it("an override without a reason is refused and changes nothing", () => {
+    for (const reason of ["", "   "]) {
+      expect(reviewInspection(withFail, { action: "override", ...reviewer, reason })).toEqual({ ok: false, error: "A reason is required to override." });
+    }
+  });
+
+  it("request retake: Needs review becomes Rejected steps, naming the step", () => {
+    const r = reviewInspection(withFail, { action: "retake", ...reviewer, step: 4 });
+    expect(r.ok && inspectionStatus(r.inspection)).toBe("Rejected steps");
+    expect(r.ok && r.inspection.reviewLog).toEqual([{ action: "retake", user: "R. Menon", time: "7 Oct 2026, 09:40", step: 4 }]);
+  });
+
+  it("a retake must name a failed or warned step that exists", () => {
+    expect(reviewInspection(withFail, { action: "retake", ...reviewer, step: 1 })).toEqual({ ok: false, error: "Step 1 is not a failed or warned step of INS-T." });
+    expect(reviewInspection({ ...base, steps: 15, passed: 10 }, { action: "retake", ...reviewer, step: 3 }).ok).toBe(false); // no step detail to point at
+  });
+
+  it("override, then retake: the override stays logged and the latest action decides, so the report is Rejected steps", () => {
+    const o = reviewInspection(withFail, { action: "override", ...reviewer, reason: "Confirmed by call." });
+    if (!o.ok) throw new Error("override failed");
+    const r = reviewInspection(o.inspection, { action: "retake", user: "R. Menon", time: "8 Oct 2026, 11:15", step: 4 });
+    expect(r.ok && inspectionStatus(r.inspection)).toBe("Rejected steps");
+    expect(r.ok && r.inspection.reviewLog!.map((e) => e.action)).toEqual(["override", "retake"]);
+  });
+
+  it("confirm: a report with only a warning can be confirmed and becomes Validated", () => {
+    const r = reviewInspection(withWarn, { action: "confirm", ...reviewer });
+    expect(r.ok && inspectionStatus(r.inspection)).toBe("Validated");
+    expect(r.ok && r.inspection.reviewLog).toEqual([{ action: "confirm", user: "R. Menon", time: "7 Oct 2026, 09:40" }]);
+  });
+
+  it("confirm is refused while a step has failed, or did not pass with no detail", () => {
+    const msg = "A failed step cannot be confirmed. Override with a reason or request a retake.";
+    expect(reviewInspection(withFail, { action: "confirm", ...reviewer })).toEqual({ ok: false, error: msg });
+    expect(reviewInspection({ ...base, steps: 15, passed: 10 }, { action: "confirm", ...reviewer })).toEqual({ ok: false, error: msg });
+  });
+
+  it("a report with every step passed has nothing to review", () => {
+    expect(reviewInspection(clean, { action: "confirm", ...reviewer })).toEqual({ ok: false, error: "INS-T has no failed or warned steps. There is nothing to review." });
+  });
+
+  it("a reviewer name and a time are required", () => {
+    expect(reviewInspection(withFail, { action: "override", user: " ", time: "t", reason: "r" }).ok).toBe(false);
+    expect(reviewInspection(withFail, { action: "override", user: "u", time: "", reason: "r" }).ok).toBe(false);
+  });
+
+  it("the demo inspection INS-0418 has a logged override with its reason, user and time, then a retake: Rejected steps", () => {
+    const i = inspections.find((x) => x.id === "INS-0418")!;
+    expect(inspectionStatus(i)).toBe("Rejected steps");
+    expect(i.reviewLog).toHaveLength(2);
+    expect(i.reviewLog![0]).toMatchObject({ action: "override", user: "R. Menon, Lumen Apparel Group", time: "7 Oct 2026, 09:40" });
+    expect(i.reviewLog![0].reason!.length).toBeGreaterThan(0);
+    expect(i.reviewLog![1]).toMatchObject({ action: "retake", step: 6 });
+  });
+
+  it("INS-0412 moves through each transition from its data", () => {
+    const i = inspections.find((x) => x.id === "INS-0412")!;
+    expect(inspectionStatus(i)).toBe("Needs review");
+    const retake = reviewInspection(i, { action: "retake", ...reviewer, step: 9 });
+    expect(retake.ok && inspectionStatus(retake.inspection)).toBe("Rejected steps");
+    expect(reviewInspection(i, { action: "confirm", ...reviewer }).ok).toBe(false); // step 9 failed
   });
 });

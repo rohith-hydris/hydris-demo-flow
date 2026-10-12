@@ -77,7 +77,10 @@ describe("V2 4.2: missing data in R", () => {
   it("F11 coastal eutrophication Error changes neither R nor the counts", () => {
     const sites = getSites(scopeFor("brand"));
     const f11 = sites.find((s) => s.id === "F11")!;
-    expect(f11.R).toBeCloseTo(0.38, 2);
+    const rec = riskScores.find((r) => r.factoryId === "F11")!;
+    const without = (gaps: object) => { const p = riskPillarsPolicy(rec.scores, gaps); return riskR(p.pillars, DEFAULT_WEIGHTS, p.missingPillars); };
+    expect(without({ rfr: "No data", cep: "Error" })).toBeCloseTo(without({ rfr: "No data" }), 12); // the cep gap alone moves nothing
+    expect(f11.R).toBeCloseTo(0.365, 3);
     expect(f11.riskCounts).toMatchObject({ present: 1, watch: 4 });
     expect(f11.risks.find((r) => r.code === "cep")!.status).toBe("Error");
     expect(sites.find((s) => s.id === "F10")!.risks.find((r) => r.code === "cfr")!.status).toBe("No data");

@@ -136,7 +136,18 @@ export function TechTableBlock({ block }: { block: B<"techTable"> }) {
           ))}
         </tbody>
       </table>
-      <p className="border-t border-line bg-card px-3 py-2 text-sm text-ink-500">Hard filters passed for all three. Scores are illustrative.</p>
+      <p className="border-t border-line bg-card px-3 py-2 text-sm text-ink-500">Hard filters passed for {block.passed} of {block.of} technologies. Only those are scored. Scores are illustrative.</p>
+      {block.nearMisses.length > 0 && (
+        <div className="border-t border-line bg-card px-3 py-3">
+          <p className="font-semibold text-ink-900">Near misses, not scored</p>
+          <p className="text-sm text-ink-500">These plants fail exactly one hard filter.</p>
+          <ul className="mt-2 space-y-1 text-sm text-ink-700">
+            {block.nearMisses.map((m) => (
+              <li key={`${m.technology}-${m.plant}`}><span className="font-semibold">{m.plant}</span> for the {m.technology.toLowerCase()}: <span className="font-semibold">{m.reason}</span>, {m.detail}.</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

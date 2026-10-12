@@ -175,9 +175,9 @@ describe("scripts C1 to C6 (PRODUCT 7)", () => {
     expect(texts(a)[0]).toBe("Three plants need attention:");
     const g = block(a, "offTrack").groups;
     expect(g.map((x) => x.supplier)).toEqual(["Cauvery Dyeing & Finishing", "Kongu Knit Processing", "Coromandel Denim Mills"]);
-    expect(g[0].plants[0]).toMatchObject({ id: "F06", name: "Erode Wet Process", severity: "Critical", message: "Dropped to Not conformant; OCEMS offline 9 days" });
+    expect(g[0].plants[0]).toMatchObject({ id: "F06", name: "Erode Wet Process", severity: "Critical", message: "Dropped to Not conformant; plant health is Critical (38 out of 100)" });
     expect(g[1].plants[0]).toMatchObject({ id: "F02", severity: "High", age: "12 days ago" });
-    expect(g[2].plants[0]).toMatchObject({ id: "F13", severity: "High", message: "No data for 9 days (water meter log)" });
+    expect(g[2].plants[0]).toMatchObject({ id: "F13", severity: "High", message: "No data for 9 days" });
     expect(texts(a)[1]).toBe("Noyyal Textile Works and Palar Fabrics are on track.");
   });
 

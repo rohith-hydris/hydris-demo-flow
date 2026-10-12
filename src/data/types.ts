@@ -1,6 +1,6 @@
 import type { EligibilityChecks } from "@/src/lib/states";
 import type {
-  CellGrade, CellState, CheckResult, Dimension, EvidenceGrade, FactoryId, InspectionStatus, LedgerStatus, Period, Pillar,
+  CellGrade, CellState, CheckResult, Dimension, EvidenceGrade, FactoryId, LedgerStatus, Period, Pillar,
   ParticipantRole, ProjectStatus, ReadinessState, ReviewStates, RiskCode, RiskGap, Severity, SupplierId, ZdhcTier,
 } from "@/src/lib/types";
 
@@ -17,6 +17,8 @@ export interface FactoryRecord {
   /** Replenishment Needed, m3 per year. */
   replenishmentNeededM3: number;
   headcount: number;
+  /** Plant attributes for technology matching (Module 06). Demo values. Processes run, effluent profile, ETP type, and ETP flow in m3 per day. */
+  processes: string[]; effluentProfile: string; etpType: string; etpFlowM3PerDay: number;
   /** Household size h. */
   householdSize: number;
   evidenceGrade: EvidenceGrade;
@@ -55,17 +57,23 @@ export interface RiskScoreRecord {
 }
 
 export interface TierChange { from: ZdhcTier; to: ZdhcTier; daysAgo: number }
+/**
+ * Module 06 plant signals, as inputs. Health score, band, alerts, severity and off-track are derived in src/lib/ops.ts.
+ */
 export interface OpsRecord {
   factoryId: FactoryId;
-  healthScore: number;
+  /** Share of outlet readings within consent limits, 0 to 100. */
+  outletCompliancePct: number;
+  /** Monitoring uptime (OCEMS and meters), 0 to 100. */
+  uptimePct: number;
+  /** Days since the last reading. 7 or more is a data gap. */
+  dataAgeDays: number;
   zdhcTier: ZdhcTier;
   tierChange: TierChange | null;
-  highestAlert: Severity | null;
-  alertMessage: string | null;
-  /** The Medium "benefit behind target" alert is derived from the pro-rated benefit share, not typed. `alertMessage` then holds only the rest. */
+  /** The plant tracks "benefit behind target" from its pro-rated benefit shares (issue A3). */
   benefitBehindAlert?: boolean;
-  /** Age of the alert in days where the spec states it. */
-  alertAgeDays: number | null;
+  /** A project monitoring check that is overdue, named in the benefit alert. */
+  overdueMonitoring?: { project: string; days: number };
 }
 
 export type Measure =
@@ -130,11 +138,17 @@ export interface DocumentRecord {
 }
 
 export type InspectionSource = "Field Glasses" | "Field upload (phone or web)";
+/** A manager's review action on an inspection report, logged with who and when. An override carries its reason; a retake names the step. */
+export interface InspectionReview {
+  action: "confirm" | "override" | "retake";
+  user: string; time: string; reason?: string; step?: number;
+}
 export interface InspectionStep { n: number; instruction: string; result: CheckResult; check?: string; reason?: string }
 /** Trust score is computed as passed / steps. `stepDetail` lists only the non-pass steps the spec describes. */
 export interface InspectionRecord {
   id: string; factoryId: FactoryId; date: string; steps: number; passed: number;
-  status: InspectionStatus;
+  /** Every review action taken on the report, oldest first. The status is derived from the steps and this log (claims.ts inspectionStatus). */
+  reviewLog?: InspectionReview[];
   /** V2 14: ordinary field uploads are allowed. They do not need Field Glasses hardware. */
   source: InspectionSource; stepDetail?: InspectionStep[];
 }

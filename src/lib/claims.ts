@@ -1,10 +1,10 @@
 import { documents } from "@/src/data/documents";
 import { inspections } from "@/src/data/inspections";
 import { projects } from "@/src/data/projects";
-import type { ClaimAmount, DocumentRecord, InspectionRecord, ProjectRecord } from "@/src/data/types";
+import type { ClaimAmount, DocumentRecord, InspectionRecord, InspectionReview, ProjectRecord } from "@/src/data/types";
 import { countedValue, lowValue } from "./pwi";
 import { countsTowardPwi } from "./states";
-import type { FactoryId, ProjectStatus, ReadinessState } from "./types";
+import type { FactoryId, InspectionStatus, ProjectStatus, ReadinessState } from "./types";
 
 // PRODUCT 4.4 (Projects, Evidence), 4.6 (Claims) and 5.10 to 5.11. Counted and low values are computed here.
 
@@ -100,5 +100,60 @@ export function readinessShare(factoryId: FactoryId): number {
 
 /** Trust score of a field inspection: steps passed over steps taken. */
 export const trustScore = (i: InspectionRecord) => i.passed / i.steps;
+
+/** What is not a pass in a report: failed and warned steps from the step detail, and steps that did not pass with no detail recorded. */
+export function inspectionIssues(i: InspectionRecord) {
+  const detail = i.stepDetail ?? [];
+  const fails = detail.filter((s) => s.result === "Fail").length;
+  const warns = detail.filter((s) => s.result === "Warn").length;
+  const unresolved = Math.max(0, i.steps - i.passed - fails - warns);
+  return { fails, warns, unresolved };
+}
+
+/**
+ * The status of a field inspection report, derived rather than stored:
+ *  - the latest review action decides: a retake request gives "Rejected steps"; an override with a reason or a confirm gives "Validated";
+ *  - with no review action, any failed step (or a step that did not pass and has no detail) or any warning gives "Needs review";
+ *  - a report with every step passed is "Validated".
+ */
+export function inspectionStatus(i: InspectionRecord): InspectionStatus {
+  const last = i.reviewLog?.[i.reviewLog.length - 1];
+  if (last) return last.action === "retake" ? "Rejected steps" : "Validated";
+  const { fails, warns, unresolved } = inspectionIssues(i);
+  return fails + warns + unresolved > 0 ? "Needs review" : "Validated";
+}
+
+export type ReviewAction =
+  | { action: "confirm"; user: string; time: string }
+  | { action: "override"; user: string; time: string; reason: string }
+  | { action: "retake"; user: string; time: string; step: number };
+export type ReviewResult = { ok: true; inspection: InspectionRecord } | { ok: false; error: string };
+
+/**
+ * A manager's review action on a report: confirm, override with a reason, or request a retake. Returns the report with the action
+ * logged (who, when, and the reason or step), or an error and no change.
+ *  - confirm: only a report with no failed step can be confirmed.
+ *  - override: a reason is required, and is logged with the user and time.
+ *  - retake: names a failed or warned step from the step detail; the report becomes "Rejected steps".
+ */
+export function reviewInspection(i: InspectionRecord, a: ReviewAction): ReviewResult {
+  if (!a.user.trim()) return { ok: false, error: "A reviewer name is required." };
+  if (!a.time.trim()) return { ok: false, error: "A time is required." };
+  const { fails, warns, unresolved } = inspectionIssues(i);
+  if (fails + warns + unresolved === 0 && !i.reviewLog?.length) return { ok: false, error: `${i.id} has no failed or warned steps. There is nothing to review.` };
+  let entry: InspectionReview;
+  if (a.action === "confirm") {
+    if (fails + unresolved > 0) return { ok: false, error: "A failed step cannot be confirmed. Override with a reason or request a retake." };
+    entry = { action: "confirm", user: a.user, time: a.time };
+  } else if (a.action === "override") {
+    if (!a.reason.trim()) return { ok: false, error: "A reason is required to override." };
+    entry = { action: "override", user: a.user, time: a.time, reason: a.reason.trim() };
+  } else {
+    const step = i.stepDetail?.find((s) => s.n === a.step && s.result !== "Pass");
+    if (!step) return { ok: false, error: `Step ${a.step} is not a failed or warned step of ${i.id}.` };
+    entry = { action: "retake", user: a.user, time: a.time, step: a.step };
+  }
+  return { ok: true, inspection: { ...i, reviewLog: [...(i.reviewLog ?? []), entry] } };
+}
 
 export const inspectionsFor = (factoryId: FactoryId) => inspections.filter((i) => i.factoryId === factoryId);

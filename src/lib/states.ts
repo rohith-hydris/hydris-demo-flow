@@ -50,7 +50,7 @@ export const DOCUMENT_ACCEPTANCE = {
   Ready: "Accepted", "Low confidence": "Accepted with warning", "Failed check": "Rejected", "Expired / out of period": "Rejected", Missing: "Pending",
 } as const;
 export const reportStates = (readiness: keyof typeof DOCUMENT_ACCEPTANCE): Partial<ReviewStates> => ({ evidenceAcceptance: DOCUMENT_ACCEPTANCE[readiness] });
-export const inspectionStates = (status: "Needs review" | "Validated"): Partial<ReviewStates> => ({ evidenceAcceptance: status === "Validated" ? "Accepted" : "Pending" });
+export const inspectionStates = (status: "Needs review" | "Validated" | "Rejected steps"): Partial<ReviewStates> => ({ evidenceAcceptance: status === "Validated" ? "Accepted" : status === "Rejected steps" ? "Rejected" : "Pending" });
 
 /** V2 14: closes every validation verdict. */
 export const VERDICT_CLOSING = "This checks the evidence. It does not by itself prove environmental impact.";
