@@ -1,4 +1,5 @@
 import { cellStateOverrides } from "@/src/data/cells";
+import { confidenceOf } from "./confidence";
 import type { DeliveredRecord, FactoryRecord, Measure, RemovalRecord, WorkedExample } from "@/src/data/types";
 import type { CellGrade, CellState, StatusBand, Dimension, EvidenceGrade, FactoryId, Pillar, TargetState } from "./types";
 
@@ -251,6 +252,7 @@ function deriveState(factoryId: FactoryId, pillar: Pillar, dimension: Dimension,
 export function buildFactoryPwi(
   factory: FactoryRecord, delivered: DeliveredRecord | undefined, removal: RemovalRecord, worked: WorkedExample | null,
 ): FactoryPwi {
+  const confidence = confidenceOf(factory.id).confidence; // PRD 4.8: computed from the self-assessment and cross-checks
   const targets = cellTargets(factory.replenishmentNeededM3, factory.headcount, factory.householdSize);
   const p1q = p1Quality(removal);
   const cells: PwiCell[] = [];
@@ -321,7 +323,7 @@ export function buildFactoryPwi(
     factoryId: factory.id, cells, pillars, pillarsCentral, pillarsLow, sitePwi: pwi, sitePwiCentral: pwiCentral,
     sitePwiLow: sitePwi(pillarsLow.P1, pillarsLow.P2, pillarsLow.P3),
     volumetricBalance: balanceOf(true), volumetricBalanceCentral: balanceOf(false),
-    confidence: factory.confidence, statusBand: internalStatusBand(pwi, factory.confidence),
+    confidence, statusBand: internalStatusBand(pwi, confidence),
     evidenceGrade: factory.evidenceGrade, guide,
   };
 }

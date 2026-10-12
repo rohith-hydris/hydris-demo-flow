@@ -172,3 +172,22 @@ describe("ranking a supplier's own factories among themselves (PRODUCT 2)", () =
     expect(Object.keys(getRankRanges(scopeFor("supplier"))).sort()).toEqual(["F12", "F13", "F14"]);
   });
 });
+
+describe("the 2050 water stress rise is still the last tie-break (B2)", () => {
+  // Two sites tied on band, I, R and Present count: the larger bws50 - bws ranks first. 2030 and the other 2050 scores are not used.
+  const tied = (id: string, bwsRise: number): RankInput => synth(id, { bwsRise });
+  it("orders a tie by the larger 2050 rise", () => {
+    expect(rankSites([tied("A", 0.2), tied("B", 0.9)]).map((r) => r.id)).toEqual(["B", "A"]);
+    expect(rankSites([tied("A", 0.9), tied("B", 0.2)]).map((r) => r.id)).toEqual(["A", "B"]);
+  });
+  it("bwsRise is 2050 minus today's water stress score for every site, whatever the new outlook fields hold", () => {
+    for (const r of riskScores) {
+      expect(bwsRise(r.scores)).toBeCloseTo(r.scores.bws50 - r.scores.bws, 12);
+      expect(bwsRise({ ...r.scores, bws30: 0, bwd50: 5, iav30: 0, sev50: 5 })).toBeCloseTo(r.scores.bws50 - r.scores.bws, 12);
+    }
+  });
+  it("all 14 ranks still match the PRODUCT 5.5 check values", () => {
+    const ranked = rankSites(inputs());
+    for (const c of siteChecks) expect(ranked.find((r) => r.id === c.id)!.rank).toBe(c.rank);
+  });
+});

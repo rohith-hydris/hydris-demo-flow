@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { BAND1_NOTE, LARGE_FOOTPRINT_NOTE } from "@/src/lib/explain";
 import { fmtScore, fmtPct1 } from "@/src/lib/format";
 import { I_LARGE, R_BAND1 } from "@/src/lib/rank";
-import { headlineRisks } from "@/src/lib/risk";
+import { WATER_STRESSED_LABEL, headlineRisks } from "@/src/lib/risk";
 import type { Site } from "@/src/lib/selectors";
 import { PILLARS } from "@/src/lib/pwi";
 import {
@@ -52,6 +52,7 @@ export default function FactoryCard({ site }: { site: Site }) {
             </div>
             <ScoreBar className="mt-2" value={site.R} tick={R_BAND1} tone={tone} label="Risk R" valueText={`${fmtScore(site.R)} of 1, ${BAND1_NOTE}`} />
             <p className="mt-2 text-sm text-ink-500">{plural(site.riskCounts.present, "risk", "risks")} present, {site.riskCounts.watch} watch</p>
+            {site.riskFlags.waterStressed && <div className="mt-2"><StatusPill tone="negative" shape="triangle" label={WATER_STRESSED_LABEL} wrap /></div>}
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {chips.map((c) => <StatusPill key={c.code} tone="negative" shape="triangle" label={c.shortName} />)}
               {chips.length > 0 && more > 0 && <span className="text-sm font-semibold text-ink-500">+{more} more</span>}

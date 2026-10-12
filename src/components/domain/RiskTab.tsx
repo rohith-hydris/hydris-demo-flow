@@ -6,8 +6,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { fmtScore } from "@/src/lib/format";
-import { COUNTRY_LEVEL_NOTE, VINTAGE_NOTE, coverageLine, explainRisk, hasMissingPillar, renormalisationLine } from "@/src/lib/riskCopy";
-import { DEFAULT_WEIGHTS, PILLAR_KEYS, PILLAR_LABELS, PRESENT_AT, RISK_COUNTED, WATCH_AT, type RiskResult } from "@/src/lib/risk";
+import { COUNTRY_LEVEL_NOTE, RULE_NOTE, VINTAGE_NOTE, coverageLine, explainRisk, hasMissingPillar, renormalisationLine } from "@/src/lib/riskCopy";
+import { DEFAULT_WEIGHTS, PILLAR_KEYS, PILLAR_LABELS, PRESENT_AT, RISK_COUNTED, WATCH_AT, WATER_STRESSED_LABEL, snappedNote, type RiskResult } from "@/src/lib/risk";
 import type { Site } from "@/src/lib/selectors";
 import { traceRisk } from "@/src/lib/trace";
 import type { RiskCategory, RiskCode } from "@/src/lib/types";
@@ -41,7 +41,9 @@ function RiskCard({ risk, site }: { risk: RiskResult; site: Site }) {
         {risk.countryLevel && <StatusPill tone="neutral" shape="ring" label="Country-level" />}
         {risk.excludedFromCounts && <StatusPill tone="neutral" shape="ring" label="Shown separately" />}
         {risk.compositeLabel && <StatusPill tone="negative" shape="triangle" label={risk.compositeLabel} />}
+        {risk.rule && <StatusPill tone="info" shape="circle" label={risk.rule} />}
       </div>
+      {risk.rule && <p className="mt-2 text-sm text-ink-700">{RULE_NOTE[risk.rule]}</p>}
 
       {risk.gap ? (
         <div className="mt-3">
@@ -92,6 +94,13 @@ export default function RiskTab({ site }: { site: Site }) {
             <InfoButton trace={traceRisk(site)} />
           </div>
           <p className="mt-1 text-ink-500">Each pillar is its worst available indicator on the 0 to 5 scale, divided by 5. R adds the pillars by weight.</p>
+          {(site.riskFlags.waterStressed || site.riskFlags.snappedKm !== null || site.riskFlags.noAreaData) && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {site.riskFlags.waterStressed && <StatusPill tone="negative" shape="triangle" label={WATER_STRESSED_LABEL} />}
+              {site.riskFlags.snappedKm !== null && <StatusPill tone="info" shape="circle" label={snappedNote(site.riskFlags.snappedKm)} />}
+              {site.riskFlags.noAreaData && <StatusPill tone="neutral" shape="ring" label="No data: no area found for this site" />}
+            </div>
+          )}
           <p className="mt-3 flex flex-wrap items-center gap-2 font-semibold text-ink-900">
             {coverageLine(site)}
             {hasMissingPillar(site) && <StatusPill tone="caution" shape="triangle" label="Pillar missing" />}
@@ -109,7 +118,10 @@ export default function RiskTab({ site }: { site: Site }) {
                 ) : (
                   <>
                     <ScoreBar value={site.pillars[k]} label={`${PILLAR_LABELS[k]} pillar`} valueText={fmtScore(site.pillars[k])} />
-                    <span className="num text-right text-ink-700">{fmtScore(site.pillars[k])} <span className="text-ink-500">× {fmtScore(DEFAULT_WEIGHTS[k])}</span></span>
+                    <span className="num text-right text-ink-700">
+                      {site.riskFlags.flaggedPillars.includes(k) && <span className="mr-2 text-sm font-semibold text-blue-600">Set by rule</span>}
+                      {fmtScore(site.pillars[k])} <span className="text-ink-500">× {fmtScore(DEFAULT_WEIGHTS[k])}</span>
+                    </span>
                   </>
                 )}
               </li>

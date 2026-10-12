@@ -1,3 +1,4 @@
+import { riskScores } from "@/src/data/risks";
 import { describe, expect, it } from "vitest";
 import { projects } from "@/src/data/projects";
 import { fmtCellScore, fmtPct1, fmtScore3 } from "./format";
@@ -44,7 +45,7 @@ describe("F12 impact grid matches PRODUCT 5.8 exactly", () => {
     expect(fmtPct1(f12.pwi.volumetricBalanceCentral)).toBe("73.6%");
     expect(fmtPct1(f12.pwi.sitePwi)).toBe("68.3%");
     expect(f12.pwi.statusBand).toBe("In progress");
-    expect(f12.pwi.confidence).toBe(0.78);
+    expect(f12.pwi.confidence).toBeCloseTo(0.78, 2);
   });
 
   it("Guide-compatible toggle: 70.7% with P1 Quality scored as 1.0, against 69.8% for PWI-M 1.0", () => {
@@ -71,8 +72,10 @@ describe("F12 impact grid matches PRODUCT 5.8 exactly", () => {
     expect(waterBalance("F01")).toBeNull();
   });
 
-  it("ledger, newest first: LE-2347 (Draft), LE-2291 (Verified), LE-1880 (Audited, Locked); prior month 70.3%", () => {
-    expect(ledgerFor("F12").map((l) => [l.id, l.periodStatus])).toEqual([["LE-2347", "Draft"], ["LE-2291", "Verified"], ["LE-1880", "Locked"]]);
+  it("ledger, newest first: the Sep 2026 Draft entries (LE-2349 down to LE-2341), then LE-2291 (Verified) and LE-1880 (Audited, Locked); prior month 70.3%", () => {
+    const l = ledgerFor("F12");
+    expect(l.map((x) => x.id)).toEqual(["LE-2349", "LE-2348", "LE-2347", "LE-2346", "LE-2345", "LE-2344", "LE-2343", "LE-2342", "LE-2341", "LE-2291", "LE-1880"]);
+    expect(l.map((x) => x.periodStatus)).toEqual([...Array(9).fill("Draft"), "Verified", "Locked"]);
     expect(fmtPct1(priorMonthSitePwi("F12")!)).toBe("70.3%");
     expect(ledgerFor("F01")).toEqual([]);
     expect(priorMonthSitePwi("F01")).toBeNull();
@@ -124,7 +127,7 @@ describe("risk card text (PRODUCT 4.4)", () => {
     expect(e.reason).toBe("The score of 2.09 out of 5 is from 2.00 up to 3.00.");
     expect(e.threshold).toBe("0.91 below the Present line (3.00) and 0.09 above the Watch line (2.00).");
     expect(e.whatWouldChange).toContain("Present if the score rose by 0.91 or more");
-    expect(e.outlook).toBe("2050 outlook: the water stress score moves from 2.09 to 2.59 (up 0.50).");
+    expect(e.outlook).toBe("2030: the score moves from 2.09 to 2.29 (up 0.20). 2050: from 2.09 to 2.59 (up 0.50). 2080 not available in Aqueduct 4.0.");
     expect(e.caveats).toContain("Raw value: 20.9%.");
     expect(e.vintage).toBe("Aqueduct 4.0");
   });
@@ -161,9 +164,25 @@ describe("risk card text (PRODUCT 4.4)", () => {
     expect(explain("F01", "cep").caveats.join(" ")).toContain("left out of the Present and Watch counts");
   });
 
-  it("only water stress has an outlook (the data holds only the 2050 score)", () => {
-    for (const code of ["bwd", "iav", "sev", "gtd", "drr"]) expect(explain("F12", code).outlook).toBeNull();
-    expect(explain("F12", "bws").outlook).toContain("from 4.75 to 5.00");
+  it("water stress, depletion and both variability indicators show 2030 and 2050, and say 2080 is not available", () => {
+    for (const code of ["bws", "bwd", "iav", "sev"]) {
+      const o = explain("F12", code).outlook!;
+      expect(o).toMatch(/^2030: .* 2050: .* 2080 not available in Aqueduct 4\.0\.$/);
+    }
+    expect(explain("F12", "bws").outlook).toContain("from 4.75 to 4.85 (up 0.10)");
+    expect(explain("F12", "bws").outlook).toContain("from 4.75 to 5.00 (up 0.25)");
+  });
+  it("every other risk shows no outlook", () => {
+    for (const code of ["gtd", "drr", "rfr", "cfr", "ucw", "cep", "udw", "usa", "rri", "tex"]) expect(explain("F12", code).outlook).toBeNull();
+  });
+  it("outlook scores are stored per site, within 0 to 5, and never fall below today's score", () => {
+    for (const r of riskScores) {
+      const x = r.scores;
+      for (const k of ["bws", "bwd", "iav", "sev"] as const) {
+        const [now, y30, y50] = [x[k], x[`${k}30` as const], x[`${k}50` as const]];
+        expect(y30).toBeGreaterThanOrEqual(now); expect(y50).toBeGreaterThanOrEqual(y30); expect(y50).toBeLessThanOrEqual(5);
+      }
+    }
   });
 });
 

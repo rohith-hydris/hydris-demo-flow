@@ -58,7 +58,7 @@ describe("dataset shape (PRODUCT 5.1 to 5.3)", () => {
       }
     }
     for (const r of riskScores) for (const v of Object.values(r.scores)) { expect(v).toBeGreaterThanOrEqual(0); expect(v).toBeLessThanOrEqual(5); }
-    for (const f of factories) { expect(f.footprintI).toBeGreaterThan(0); expect(f.footprintI).toBeLessThanOrEqual(1); expect(f.confidence).toBeLessThanOrEqual(1); }
+    for (const f of factories) { expect(f.footprintI).toBeGreaterThan(0); expect(f.footprintI).toBeLessThanOrEqual(1); }
   });
 
   it("coordinates fall inside Tamil Nadu's bounding box", () => {
@@ -69,8 +69,8 @@ describe("dataset shape (PRODUCT 5.1 to 5.3)", () => {
   });
 
   it("matches a few raw master values: F01 and F12", () => {
-    expect(factories.find((f) => f.id === "F01")).toMatchObject({ footprintI: 0.78, replenishmentNeededM3: 98000, headcount: 2100, householdSize: 3.6, confidence: 0.72, evidenceGrade: "B" });
-    expect(factories.find((f) => f.id === "F12")).toMatchObject({ footprintI: 0.91, replenishmentNeededM3: 110000, headcount: 1200, householdSize: 3.9, confidence: 0.78, evidenceGrade: "B" });
+    expect(factories.find((f) => f.id === "F01")).toMatchObject({ footprintI: 0.78, replenishmentNeededM3: 98000, headcount: 2100, householdSize: 3.6, evidenceGrade: "B" });
+    expect(factories.find((f) => f.id === "F12")).toMatchObject({ footprintI: 0.91, replenishmentNeededM3: 110000, headcount: 1200, householdSize: 3.9, evidenceGrade: "B" });
   });
 
   it("stores inputs only: no computed field (R, rank, tier, band, quadrant, PWI) is saved in the data", () => {
@@ -90,8 +90,8 @@ describe("references between datasets", () => {
     expect(new Set(projects.map((p) => p.id)).size).toBe(projects.length);
   });
 
-  it("F12 has the three ledger entries: LE-2291, LE-2347, LE-1880", () => {
-    expect(ledger.map((l) => l.id)).toEqual(["LE-2291", "LE-2347", "LE-1880"]);
+  it("F12 has a ledger entry for each of the nine cells, plus the baseline and the Aug 2026 P2 entry", () => {
+    expect(ledger.map((l) => l.id).sort()).toEqual(["LE-1880", "LE-2291", "LE-2341", "LE-2342", "LE-2343", "LE-2344", "LE-2345", "LE-2346", "LE-2347", "LE-2348", "LE-2349"]);
     expect(ledger.find((l) => l.id === "LE-1880")).toMatchObject({ entryStatus: "Audited", periodStatus: "Locked" });
   });
 

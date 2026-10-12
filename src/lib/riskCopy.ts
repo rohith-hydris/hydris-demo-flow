@@ -40,6 +40,12 @@ export interface RiskExplanation {
   vintage: "Aqueduct 4.0" | "About 2014";
 }
 
+const move = (from: number, to: number) => `${fmtScore(to)} (${to >= from ? "up" : "down"} ${fmtScore(Math.abs(to - from))})`;
+export const OUTLOOK_2080_NOTE = "2080 not available in Aqueduct 4.0";
+/** "2030: 2.09 to 2.30 (up 0.21). 2050: ... 2080 not available in Aqueduct 4.0." */
+export const outlookText = (score: number, o: { y2030: number; y2050: number }) =>
+  `2030: the score moves from ${fmtScore(score)} to ${move(score, o.y2030)}. 2050: from ${fmtScore(score)} to ${move(score, o.y2050)}. ${OUTLOOK_2080_NOTE}.`;
+
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 
 export function explainRisk(r: RiskResult, site: Site): RiskExplanation {
@@ -88,11 +94,9 @@ export function explainRisk(r: RiskResult, site: Site): RiskExplanation {
       ? `It would become Present if the score rose by ${fmtScore(PRESENT_AT - s)} or more${near(s, WATCH_AT) ? ", or Not present with any fall." : `, or Not present if it fell by more than ${fmtScore(s - WATCH_AT)}.`}`
       : `It would become Watch if the score rose by ${fmtScore(WATCH_AT - s)} or more.`;
 
-  // The data holds only the 2050 water stress score, so only water stress has an outlook. 2030 and 2080 are not shown.
-  const outlook =
-    r.code === "bws"
-      ? `2050 outlook: the water stress score moves from ${score} to ${fmtScore(s + site.bwsRise)} (${site.bwsRise >= 0 ? "up" : "down"} ${fmtScore(Math.abs(site.bwsRise))}).`
-      : null;
+  // Aqueduct 4.0 has 2030 and 2050 for water stress, depletion and the two variability indicators. 2080 is not in the dataset,
+  // and the card says so. Every other risk shows no outlook.
+  const outlook = r.outlook ? outlookText(s, r.outlook) : null;
 
   const caveats: string[] = [];
   if (r.countryLevel) caveats.push(COUNTRY_LEVEL_NOTE);
@@ -126,3 +130,10 @@ export function renormalisationLine(site: Site): string {
   const effect = Math.abs(d) < 0.005 ? "changed R by less than 0.01" : `${d > 0 ? "raised" : "lowered"} R by ${fmtScore(Math.abs(d))}`;
   return `The ${names} pillar has no reading, so it dropped out and the other weights were renormalised. Against scoring it at the mean of the other pillars, this ${effect}. Renormalisation can raise or lower R.`;
 }
+
+/** What a special rule did to a risk card, in plain words (PRD 5.1, 5.2). */
+export const RULE_NOTE = {
+  "Arid area": "Arid area: scored as the maximum scarcity, so this scarcity risk is Present.",
+  "Insignificant Trend": "Insignificant trend: no groundwater decline to score, so this risk is Not present and the pillar is 0.",
+  "No Risk": "Coastal flood category is No Risk, so this risk is Not present.",
+} as const;

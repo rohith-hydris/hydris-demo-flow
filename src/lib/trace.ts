@@ -3,6 +3,7 @@ import { projectBenefit, projectsFor } from "./claims";
 import { fmtCellScore, fmtInt, fmtPct1, fmtScore, fmtScore3, round } from "./format";
 import { METHOD_VERSION } from "./impact";
 import { fmtClaim, fmtMeasure, measureNote } from "./measure";
+import { confidenceOf, crossChecksFor } from "./confidence";
 import { GRADE_FACTORS, PILLAR_NAMES, REMOVAL_TARGET, type PwiCell } from "./pwi";
 import { DEFAULT_WEIGHTS, PILLAR_KEYS, PILLAR_LABELS } from "./risk";
 import type { Site } from "./selectors";
@@ -67,7 +68,7 @@ export function traceSitePwi(site: Site): Trace {
       { label: "P2, sub-basin (counted)", value: fmtScore3(p.pillars.P2), cite: MODULE_IMPACT },
       { label: "P3, basin (counted)", value: fmtScore3(p.pillars.P3), cite: MODULE_IMPACT },
       { label: "Site PWI, central", value: fmtPct1(p.sitePwiCentral), cite: MODULE_IMPACT },
-      { label: "Site confidence", value: fmtScore(p.confidence), cite: "Factory master" },
+      { label: "Site confidence", value: fmtScore(p.confidence), cite: "Self-assessment and cross-checks" },
     ],
     method: PWI_METHOD, grade: gradeOf(site.evidenceGrade),
     note: `Counted ${fmtPct1(p.sitePwi)}, central ${fmtPct1(p.sitePwiCentral)}, low value ${fmtPct1(p.sitePwiLow)}.`,
@@ -128,6 +129,7 @@ export function traceConfidence(site: Site): Trace {
     title: "Site confidence",
     value: fmtScore(site.pwi.confidence),
     formula: [
+      "Confidence = the mean of (score ÷ 3 × evidence confidence) over the 52 self-assessment answers, less 0.10 for each failed cross-check XV-01 to XV-10, never below 0 (the way answers combine is proposed, under review)",
       "Internal status band, checked in order:",
       "Under 0.50: Low confidence",
       "PWI of 1.00 or more and confidence of 0.75 or more: Self-certified (internal only)",
@@ -136,6 +138,10 @@ export function traceConfidence(site: Site): Trace {
       "Otherwise: Not achieved",
     ],
     inputs: [
+      { label: "Self-assessment answer mean", value: fmtScore3(confidenceOf(site.id).answerMean), cite: "Self-assessment, 52 questions" },
+      { label: "Failed cross-checks", value: String(confidenceOf(site.id).failed) },
+      ...crossChecksFor(site.id).map((c) => ({ label: `${c.id} ${c.name}`, value: c.passed ? "Pass" : "Fail", cite: "Cross-check" })),
+      { label: "Confidence penalty", value: `−${fmtScore(confidenceOf(site.id).penalty)}` },
       { label: "Site PWI (counted)", value: fmtPct1(site.pwi.sitePwi), cite: MODULE_IMPACT },
       { label: "Site PWI (central)", value: fmtPct1(site.pwi.sitePwiCentral), cite: MODULE_IMPACT },
       { label: STATUS_BAND_LABEL, value: `${site.pwi.statusBand}. ${INTERNAL_STATUS_NOTE}` },

@@ -14,7 +14,7 @@ import { buildFactoryPwi, proRatedBenefitShare, type FactoryPwi } from "./pwi";
 import { rankRanges, rankSites, type RankInput, type RankRange } from "./rank";
 import { rollup, type Rollup } from "./rollup";
 import {
-  DEFAULT_WEIGHTS, bwsRise, evaluateRisks, renormalisationDelta, riskCounts, riskPillarsPolicy, topDrivers,
+  DEFAULT_WEIGHTS, bwsRise, evaluateRisks, recordGaps, renormalisationDelta, riskCounts, riskPillarsPolicy, siteRiskFlags, topDrivers, type SiteRiskFlags,
   type Pillars, type RiskCoverage, type RiskCounts, type RiskResult, type Weights,
 } from "./risk";
 import { canSeeFactory, type Scope } from "./scope";
@@ -26,7 +26,7 @@ import type { Band, FactoryId, Health, PillarKey, Quadrant, Severity, SupplierId
 interface StaticSite {
   record: FactoryRecord; supplierName: string;
   pillars: Pillars; missingPillars: PillarKey[]; coverage: RiskCoverage;
-  risks: RiskResult[]; riskCounts: RiskCounts; bwsRise: number;
+  risks: RiskResult[]; riskCounts: RiskCounts; bwsRise: number; riskFlags: SiteRiskFlags;
   pwi: FactoryPwi; ops: OpsRecord; health: Health; tierDirection: TierDirection | null; offTrack: boolean;
 }
 
@@ -34,8 +34,9 @@ function buildStatic(): StaticSite[] {
   return factories.map((record) => {
     const riskRecord = riskScores.find((r) => r.factoryId === record.id)!;
     const scores = riskRecord.scores;
-    const gaps = riskRecord.gaps ?? {};
-    const policy = riskPillarsPolicy(scores, gaps);
+    const gaps = recordGaps(riskRecord);
+    const riskFlags = siteRiskFlags(riskRecord);
+    const policy = riskPillarsPolicy(scores, gaps, riskFlags);
     const pwi = buildFactoryPwi(
       record,
       delivered.find((d) => d.factoryId === record.id),
@@ -44,11 +45,11 @@ function buildStatic(): StaticSite[] {
     );
     const benefit = proRatedBenefitShare(pwi, MONTHS_ELAPSED);
     const opsRow = resolveOpsRow(ops.find((o) => o.factoryId === record.id)!, benefit);
-    const risks = evaluateRisks(record.id, scores, gaps);
+    const risks = evaluateRisks(record.id, scores, gaps, riskFlags);
     return {
       record,
       supplierName: suppliers.find((s) => s.id === record.supplierId)!.name,
-      pillars: policy.pillars, missingPillars: policy.missingPillars, coverage: policy.coverage, risks, riskCounts: riskCounts(risks), bwsRise: bwsRise(scores),
+      pillars: policy.pillars, missingPillars: policy.missingPillars, coverage: policy.coverage, risks, riskCounts: riskCounts(risks), bwsRise: bwsRise(scores), riskFlags,
       pwi,
       ops: opsRow,
       health: healthBand(opsRow.healthScore),
@@ -70,7 +71,7 @@ export interface Site {
   riskCoverage: RiskCoverage; missingPillars: PillarKey[]; renormDelta: number;
   /** Share of documents that are Ready (V2 4.2). Informational only: never used to filter, sort or rank. */
   readiness: number;
-  risks: RiskResult[]; riskCounts: RiskCounts; bwsRise: number;
+  risks: RiskResult[]; riskCounts: RiskCounts; bwsRise: number; riskFlags: SiteRiskFlags;
   /** Risk score R for the weights in use. */
   R: number; band: Band; quadrant: Quadrant;
   /** Rank and tier among the sites in the requested scope (a supplier ranks its own factories among themselves). */
@@ -101,9 +102,9 @@ export function getSites(scope: Scope, weights: Weights = DEFAULT_WEIGHTS): Site
     return {
       id: f.id, name: f.name, supplierId: f.supplierId, supplierName: s.supplierName, district: f.district, lat: f.lat, lon: f.lon,
       footprintI: f.footprintI, replenishmentNeededM3: f.replenishmentNeededM3, headcount: f.headcount, householdSize: f.householdSize,
-      confidence: f.confidence, evidenceGrade: f.evidenceGrade,
+      confidence: s.pwi.confidence, evidenceGrade: f.evidenceGrade,
       pillars: s.pillars, drivers: topDrivers(s.pillars), riskCoverage: s.coverage, missingPillars: s.missingPillars,
-      renormDelta: renormalisationDelta(s.pillars, weights, s.missingPillars), readiness: readinessShare(f.id), risks: s.risks, riskCounts: s.riskCounts, bwsRise: s.bwsRise,
+      renormDelta: renormalisationDelta(s.pillars, weights, s.missingPillars), readiness: readinessShare(f.id), risks: s.risks, riskCounts: s.riskCounts, bwsRise: s.bwsRise, riskFlags: s.riskFlags,
       R: r.R, band: r.band, quadrant: r.quadrant, rank: r.rank, tier: r.tier, networkRank: n.rank, networkTier: n.tier,
       pwi: s.pwi,
       healthScore: s.ops.healthScore, health: s.health, zdhcTier: s.ops.zdhcTier,

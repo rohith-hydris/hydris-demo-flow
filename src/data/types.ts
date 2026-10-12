@@ -19,7 +19,6 @@ export interface FactoryRecord {
   headcount: number;
   /** Household size h. */
   householdSize: number;
-  confidence: number;
   evidenceGrade: EvidenceGrade;
 }
 
@@ -36,11 +35,23 @@ export interface DeliveredRecord {
 }
 export interface RemovalRecord { factoryId: FactoryId; tss: number; tn: number; tp: number } // percent
 
-export type RiskScores = Record<RiskCode, number> & { bws50: number };
+/** Aqueduct 4.0 outlook scores (0 to 5) for water stress, depletion and the two variability indicators. 2080 is not in the dataset. */
+export type OutlookScores = { bws30: number; bws50: number; bwd30: number; bwd50: number; iav30: number; iav50: number; sev30: number; sev50: number };
+export type RiskScores = Record<RiskCode, number> & OutlookScores;
 export interface RiskScoreRecord {
   factoryId: FactoryId; scores: RiskScores;
   /** V2 4.2: indicators with no usable reading. The score stays in `scores` for the record but is not used. */
   gaps?: Partial<Record<RiskCode, RiskGap>>;
+  /** PRD 5.1: an arid area. The scarcity pillar is 1.0 and the scarcity risks are Present. */
+  arid?: boolean;
+  /** PRD 5.1: groundwater table decline "Insignificant Trend" sets the groundwater pillar to 0 and the risk to Not present. */
+  gtdTrend?: "Insignificant Trend" | "Trend";
+  /** PRD 5.2: coastal flood category "No Risk" is Not present whatever the score. */
+  cfrNoRisk?: boolean;
+  /** PRD 5.2: distance in km to the nearest Aqueduct area. 0 to 5 km is "snapped"; null means no area, so every indicator is No data. */
+  snapDistanceKm?: number | null;
+  /** Raw baseline water stress as a percent. 40 or more is water-stressed. */
+  bwsPercent?: number | null;
 }
 
 export interface TierChange { from: ZdhcTier; to: ZdhcTier; daysAgo: number }
@@ -133,6 +144,13 @@ export interface LedgerEntry {
   entryStatus: LedgerStatus; periodStatus: Period;
   /** The two inputs the "why did P2 drop" answer compares, taken from the entry text in PRODUCT 5.8. */
   p2Availability?: number; desiltingFills?: number;
+  /** The grid cell this entry records, where it records one. */
+  cell?: { pillar: Pillar; dimension: Dimension };
+  /** Lineage: the facts the entry read, the method version and formula, and the inputs behind it. */
+  factIds: string[]; methodVersion: string; formula: string;
+  inputs: { label: string; value: number; unit: string }[];
+  /** Demo hash chain: the previous entry's hash (64 zeros for the first) and this entry's own hash. Sealed by src/lib/ledger.ts. */
+  previousHash: string; hash: string;
 }
 
 /** V2 5.2: one physical project has many participation records. Physical benefit is stored once, on the project. */
@@ -146,4 +164,14 @@ export interface Participant {
   claimState: "Eligible" | "Conflict" | "n/a";
   /** True for the participants who are Lumen supply-chain sites in the demo. */
   factoryId?: FactoryId;
+}
+
+/** PRD 4.8: one self-assessment answer, scored 0 to 3, with the confidence in its evidence (1.0, 0.7 or 0.5). */
+export type AssessmentAnswer = readonly [score: number, evidence: number];
+
+/** The confidence inputs for one site: 52 answers in question order, and the ids of the cross-checks XV-01 to XV-10 it fails. */
+export interface SelfAssessmentRecord {
+  factoryId: FactoryId;
+  answers: readonly AssessmentAnswer[];
+  failedChecks: readonly string[];
 }
