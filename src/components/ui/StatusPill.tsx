@@ -1,6 +1,8 @@
-import type { Band, CellState, Health, PerformanceStatus, RiskStatus, Severity, Sharing, ZdhcTier } from "@/src/lib/data";
+import { Lock } from "lucide-react";
+import { INTERNAL_STATUS_NOTE, STATUS_BAND_LABEL } from "@/src/lib/statusCopy";
+import type { Band, CellState, InspectionStatus, StatusBand, CheckResult, Health, Period, ProjectStatus, Quadrant, ReadinessState, RiskStatus, Severity, Tier, ZdhcTier } from "@/src/lib/types";
 
-export type Tone = "positive" | "caution" | "negative" | "high" | "neutral" | "info";
+export type Tone = "positive" | "caution" | "negative" | "high" | "neutral" | "info" | "internal";
 export type ShapeKind = "circle" | "diamond" | "triangle" | "square" | "ring" | "dash";
 
 // Display lookups only: how a hardcoded category is drawn. Colour is never the only cue.
@@ -16,10 +18,11 @@ export function Shape({ kind, className = "size-3.5" }: { kind: ShapeKind; class
   }
 }
 
-export function StatusPill({ tone, shape, label, className = "" }: { tone: Tone; shape: ShapeKind; label: string; className?: string }) {
+/** `wrap` lets a long label break onto two lines, for narrow spaces such as a grid cell. */
+export function StatusPill({ tone, shape, label, className = "", wrap = false }: { tone: Tone; shape: ShapeKind; label: string; className?: string; wrap?: boolean }) {
   return (
-    <span className={`tone-${tone} inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--t-bg)] px-2.5 text-sm font-semibold text-[var(--t-fg)] ${className}`}>
-      <Shape kind={shape} />
+    <span className={`tone-${tone} inline-flex min-h-7 items-center gap-1.5 ${wrap ? "rounded-2xl py-1 leading-5" : "whitespace-nowrap rounded-full"} bg-[var(--t-bg)] px-2.5 text-sm font-semibold text-[var(--t-fg)] ${className}`}>
+      <Shape kind={shape} className={wrap ? "size-3.5 shrink-0" : "size-3.5"} />
       {label}
     </span>
   );
@@ -32,23 +35,36 @@ export const bandMeta: Record<Band, Meta & { label: string }> = {
   2: { tone: "caution", shape: "diamond", label: "Band 2 · Medium risk" },
   3: { tone: "positive", shape: "circle", label: "Band 3 · Lower risk" },
 };
-export const BandPill = ({ band }: { band: Band }) => <StatusPill {...bandMeta[band]} />;
+/** `compact` drops the risk wording ("Band 1") for tight spaces such as table rows. */
+export const BandPill = ({ band, compact = false }: { band: Band; compact?: boolean }) => (
+  <StatusPill {...bandMeta[band]} label={compact ? `Band ${band}` : bandMeta[band].label} />
+);
 
 const riskMeta: Record<RiskStatus, Meta> = {
   Present: { tone: "negative", shape: "triangle" },
   Watch: { tone: "caution", shape: "diamond" },
   "Not present": { tone: "positive", shape: "circle" },
   "No data": { tone: "neutral", shape: "ring" },
+  Error: { tone: "negative", shape: "square" },
 };
 export const RiskPill = ({ status }: { status: RiskStatus }) => <StatusPill {...riskMeta[status]} label={status} />;
 
+const inspectionMeta: Record<InspectionStatus, Meta> = {
+  Validated: { tone: "positive", shape: "circle" },
+  "Needs review": { tone: "caution", shape: "diamond" },
+  "Rejected steps": { tone: "negative", shape: "square" },
+};
+export const InspectionPill = ({ status }: { status: InspectionStatus }) => <StatusPill {...inspectionMeta[status]} label={status} />;
+
 const cellMeta: Record<CellState, Meta> = {
   Scored: { tone: "positive", shape: "circle" },
+  "Partially scored": { tone: "caution", shape: "diamond" },
   "Missing input": { tone: "neutral", shape: "ring" },
+  Blocked: { tone: "negative", shape: "triangle" },
   "Not additional": { tone: "caution", shape: "diamond" },
-  "Low confidence": { tone: "high", shape: "triangle" },
+  "Low confidence": { tone: "neutral", shape: "ring" },
 };
-export const CellPill = ({ state }: { state: CellState }) => <StatusPill {...cellMeta[state]} label={state} />;
+export const CellPill = ({ state, wrap }: { state: CellState; wrap?: boolean }) => <StatusPill {...cellMeta[state]} label={state} wrap={wrap} />;
 
 export const healthMeta: Record<Health, Meta> = {
   Healthy: { tone: "positive", shape: "circle" },
@@ -64,6 +80,8 @@ export const tierMeta: Record<ZdhcTier, Meta> = {
   "Not conformant": { tone: "negative", shape: "triangle" },
 };
 
+export const ZdhcPill = ({ tier }: { tier: ZdhcTier }) => <StatusPill {...tierMeta[tier]} label={tier} />;
+
 export const severityMeta: Record<Severity, Meta> = {
   Critical: { tone: "negative", shape: "triangle" },
   High: { tone: "high", shape: "square" },
@@ -71,18 +89,101 @@ export const severityMeta: Record<Severity, Meta> = {
   Info: { tone: "info", shape: "ring" },
 };
 export const SeverityPill = ({ severity }: { severity: Severity | null }) =>
-  severity ? <StatusPill {...severityMeta[severity]} label={severity} /> : <span className="text-muted">None open</span>;
+  severity ? <StatusPill {...severityMeta[severity]} label={severity} /> : <span className="text-ink-500">None open</span>;
 
-export const performanceMeta: Record<PerformanceStatus, Meta> = {
-  "On track": { tone: "positive", shape: "circle" },
-  "Needs attention": { tone: "caution", shape: "diamond" },
-  "Off track": { tone: "negative", shape: "triangle" },
+
+export const statusBandMeta: Record<StatusBand, Meta> = {
+  "Low confidence": { tone: "neutral", shape: "ring" },
+  "Self-certified": { tone: "internal", shape: "diamond" },
+  Conditional: { tone: "info", shape: "ring" },
+  "In progress": { tone: "caution", shape: "diamond" },
+  "Not achieved": { tone: "negative", shape: "triangle" },
 };
-export const PerformancePill = ({ status }: { status: PerformanceStatus }) => <StatusPill {...performanceMeta[status]} label={status} />;
+export const StatusBandPill = ({ band }: { band: StatusBand }) => <StatusPill {...statusBandMeta[band]} label={band} />;
 
-export const SharingPill = ({ sharing }: { sharing: Sharing }) =>
-  sharing === "Shared"
-    ? <StatusPill tone="positive" shape="circle" label="Shared" />
-    : <StatusPill tone="neutral" shape="ring" label="Not shared" />;
+/** The band with its field name and the non-certification line (V2 4.3). `inline` keeps it to one wrapping row for headers. */
+export function StatusBandField({ band, inline = false }: { band: StatusBand; inline?: boolean }) {
+  return (
+    <span className={inline ? "inline-flex flex-wrap items-center gap-x-2 gap-y-1" : "flex flex-col items-start gap-1"}>
+      <span className="inline-flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-ink-500">{STATUS_BAND_LABEL}</span>
+        <StatusBandPill band={band} />
+      </span>
+      <span className="text-sm text-ink-500">{INTERNAL_STATUS_NOTE}</span>
+    </span>
+  );
+}
 
-export const trendText = { Upgraded: "↑ Upgraded", Same: "→ Same", Downgraded: "↓ Downgraded" } as const;
+export const projectStatusMeta: Record<ProjectStatus, Meta> = {
+  Validated: { tone: "positive", shape: "circle" },
+  "Pending validation": { tone: "caution", shape: "diamond" },
+  Flagged: { tone: "negative", shape: "triangle" },
+  "Not counted": { tone: "neutral", shape: "ring" },
+};
+export const ProjectStatusPill = ({ status }: { status: ProjectStatus }) => <StatusPill {...projectStatusMeta[status]} label={status} />;
+
+export const readinessMeta: Record<ReadinessState, Meta> = {
+  Ready: { tone: "positive", shape: "circle" },
+  Missing: { tone: "negative", shape: "triangle" },
+  "Failed check": { tone: "negative", shape: "triangle" },
+  "Expired / out of period": { tone: "caution", shape: "diamond" },
+  "Low confidence": { tone: "neutral", shape: "ring" },
+};
+export const ReadinessPill = ({ state }: { state: ReadinessState }) => <StatusPill {...readinessMeta[state]} label={state} />;
+
+export const checkMeta: Record<CheckResult, Meta> = {
+  Pass: { tone: "positive", shape: "circle" },
+  Warn: { tone: "caution", shape: "diamond" },
+  Fail: { tone: "negative", shape: "triangle" },
+};
+
+// Tier badges (DESIGN 2.1): Tier 1 solid blue, Tier 2 pale blue, Tier 3 neutral.
+const tierBadgeClass: Record<Tier, string> = {
+  1: "bg-blue-600 text-white",
+  2: "bg-blue-100 text-blue-600",
+  3: "tone-neutral bg-[var(--t-bg)] text-[var(--t-fg)]",
+};
+export const TierBadge = ({ tier }: { tier: Tier }) => (
+  <span className={`inline-flex min-h-7 items-center whitespace-nowrap rounded-full px-3 text-sm font-semibold ${tierBadgeClass[tier]}`}>Tier {tier}</span>
+);
+
+/** Big rank numeral in a 48px circle, coloured by tier. */
+export const RankBadge = ({ rank, tier }: { rank: number; tier: Tier }) => (
+  <span
+    className={`num grid size-12 shrink-0 place-items-center rounded-full font-display text-xl font-bold ${tierBadgeClass[tier]}`}
+    role="img" aria-label={`Rank ${rank}, Tier ${tier}`}
+  >
+    {rank}
+  </span>
+);
+
+export const quadrantMeta: Record<Quadrant, Meta> = {
+  "Act now": { tone: "info", shape: "triangle" },
+  "Build resilience": { tone: "neutral", shape: "diamond" },
+  "Reduce footprint": { tone: "neutral", shape: "square" },
+  Monitor: { tone: "neutral", shape: "circle" },
+  "Impact pending": { tone: "neutral", shape: "ring" },
+};
+export const QuadrantPill = ({ quadrant }: { quadrant: Quadrant }) => <StatusPill {...quadrantMeta[quadrant]} label={quadrant} />;
+
+export const OffTrackChip = () => <StatusPill tone="negative" shape="triangle" label="Off-track" />;
+
+// Reporting period status. A Locked period carries a lock icon (DESIGN 4.13).
+export const periodMeta: Record<Period, Meta> = {
+  Draft: { tone: "caution", shape: "diamond" },
+  Submitted: { tone: "info", shape: "ring" },
+  Verified: { tone: "positive", shape: "circle" },
+  Locked: { tone: "neutral", shape: "square" },
+};
+export function PeriodPill({ period, label }: { period: Period; label?: string }) {
+  const m = periodMeta[period];
+  return (
+    <span className={`tone-${m.tone} inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--t-bg)] px-2.5 text-sm font-semibold text-[var(--t-fg)]`}>
+      {period === "Locked" ? <Lock className="size-3.5" aria-hidden="true" /> : <Shape kind={m.shape} />}
+      {label ? `${label} · ${period}` : period}
+    </span>
+  );
+}
+
+export const LedgerPill = ({ status }: { status: "Validated" | "Audited" }) =>
+  status === "Validated" ? <StatusPill tone="positive" shape="circle" label="Validated" /> : <StatusPill tone="info" shape="square" label="Audited" />;

@@ -1,77 +1,218 @@
 @import "tailwindcss";
 
+/* Design tokens: DESIGN.md section 2. Components use these names, never raw hex. */
 :root {
-  --brand: #2347f0;
-  --brand-dark: #0b1a7a;
-  --ink: #14171f;
-  --muted: #5b6275;
-  --page: #f6f7fa;
-  --surface: #ffffff;
-  --border: #e3e6ee;
-  --row-hover: #f3f5ff;
+  --blue-700: #2449c4;
+  --blue-600: #2f5fe8;
+  --blue-500: #4c7af5;
+  --blue-100: #e4ecff;
+  --blue-50: #f0f4ff;
+  --lavender-100: #ecebff;
+  --ink-900: #101b4d;
+  --ink-700: #2b3560;
+  --ink-500: #667085;
+  --ink-300: #b7bfd6;
+  --line: #e3e8f5;
+  --page: #f7f8fc;
+  --card: #ffffff;
+  --panel-line: #d9e4ff;
 
-  /* Status tones: text and tint pass WCAG AA together; fill is for bars and markers. */
-  --positive-fg: #0b6b3a; --positive-bg: #e3f6ea; --positive-fill: #1f9d55;
-  --caution-fg: #7a4a00; --caution-bg: #fdf1d6; --caution-fill: #d9930d;
-  --negative-fg: #a11a1a; --negative-bg: #fde8e8; --negative-fill: #d92d20;
-  --high-fg: #8a3a00; --high-bg: #ffe9d6; --high-fill: #e8590c;
-  --neutral-fg: #3f4658; --neutral-bg: #eceef3; --neutral-fill: #98a2b3;
-  --info-fg: #1b2fb0; --info-bg: #e8edff; --info-fill: #2347f0;
+  --hero-start: #e9ecff;
+  --hero-mid: #f3f6ff;
+  --btn-top: #3d6bf0;
 
-  --radius-control: 8px;
-  --radius-card: 12px;
-  --shadow-pop: 0 8px 24px rgba(20, 23, 31, 0.14);
+  /* Status tones (DESIGN 2.1). Text and tint pass AA together; fill is for bars and markers. */
+  --positive-fg: #067647; --positive-bg: #e3f6ec; --positive-line: #b5e3cb; --positive-fill: #12b76a;
+  --caution-fg: #9a5b00; --caution-bg: #fff3d6; --caution-line: #f6d9a0; --caution-fill: #f79009;
+  --negative-fg: #b42318; --negative-bg: #feeceb; --negative-line: #f9c6c2; --negative-fill: #d92d20;
+  --high-fg: #c4320a; --high-bg: #ffede5; --high-line: #f9cfba; --high-fill: #e8590c;
+  --neutral-fg: #475467; --neutral-bg: #eef0f6; --neutral-line: #d9deea; --neutral-fill: #98a2b3;
+  --info-fg: #2449c4; --info-bg: #e4ecff; --info-line: #c5d5ff; --info-fill: #2f5fe8;
+  --internal-fg: #5b3fd1; --internal-bg: #efeaff; --internal-line: #d6ccff; --internal-fill: #7a5cf0;
+
+  --elev-card: 0 1px 2px rgba(16, 27, 77, 0.04), 0 8px 24px rgba(47, 95, 232, 0.06);
+  --elev-raised: 0 2px 4px rgba(16, 27, 77, 0.05), 0 14px 32px rgba(47, 95, 232, 0.12);
+  --elev-glow: 0 8px 20px rgba(47, 95, 232, 0.35);
 }
 
 @theme inline {
-  --color-brand: var(--brand);
-  --color-brand-dark: var(--brand-dark);
-  --color-navy: var(--brand-dark);
-  --color-ink: var(--ink);
-  --color-muted: var(--muted);
+  --color-blue-700: var(--blue-700);
+  --color-blue-600: var(--blue-600);
+  --color-blue-500: var(--blue-500);
+  --color-blue-100: var(--blue-100);
+  --color-blue-50: var(--blue-50);
+  --color-lavender-100: var(--lavender-100);
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-300: var(--ink-300);
+  --color-line: var(--line);
   --color-page: var(--page);
-  --color-surface: var(--surface);
-  --color-line: var(--border);
-  --font-sans: var(--font-manrope);
-  --radius-control: 8px;
-  --radius-card: 12px;
+  --color-card: var(--card);
+  --color-panel-line: var(--panel-line);
+
+  /* Older names still used by components that are replaced phase by phase. */
+  --color-brand: var(--blue-600);
+  --color-brand-dark: var(--ink-900);
+  --color-navy: var(--ink-900);
+  --color-ink: var(--ink-700);
+  --color-muted: var(--ink-500);
+  --color-surface: var(--card);
+
+  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-tile: 14px;
+  --radius-card: 20px;
+  --radius-panel: 28px;
+  --radius-control: 9999px;
+
+  --shadow-card: var(--elev-card);
+  --shadow-raised: var(--elev-raised);
+  --shadow-glow: var(--elev-glow);
+  --shadow-pop: var(--elev-raised);
+
+  /* Type scale (DESIGN 2.2). Sizes are raised for 40+ readers: body 17, tables 15, chips 13. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.75rem;
+  --text-kpi: 3rem;
+  --text-kpi--line-height: 3.25rem;
+  --text-kpi--font-weight: 700;
+  --text-numlg: 2rem;
+  --text-numlg--line-height: 2.25rem;
+  --text-numlg--font-weight: 700;
 }
 
+/* Element defaults live in the base layer and component classes in the components layer, so Tailwind utilities
+   (text-[22px], px-4, border-dashed, shadow-none) can override them. */
+@layer base {
 html { scroll-behavior: smooth; }
 
 body {
   background: var(--page);
-  color: var(--ink);
-  font-family: var(--font-manrope), system-ui, sans-serif;
-  font-size: 1rem;
-  line-height: 1.55;
+  color: var(--ink-700);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.75rem;
   overflow-x: hidden;
 }
 
-/* Visible keyboard focus everywhere. */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--ink-900);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+h1 { font-size: 2.75rem; line-height: 3.25rem; font-weight: 700; }
+h2 { font-size: 2rem; line-height: 2.5rem; font-weight: 700; }
+h3 { font-size: 1.375rem; line-height: 1.875rem; font-weight: 600; }
+h4 { font-size: 1.125rem; line-height: 1.625rem; font-weight: 600; }
+@media (max-width: 767px) {
+  h1 { font-size: 2.125rem; line-height: 2.5rem; }
+  h2 { font-size: 1.625rem; line-height: 2.125rem; }
+}
+
+td, th, .num, .kpi { font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Visible keyboard focus everywhere (3px ring, DESIGN 4.1). */
 :where(a, button, summary, select, input, [tabindex]):focus-visible {
-  outline: 3px solid var(--brand);
+  outline: 3px solid color-mix(in srgb, var(--blue-500) 45%, transparent);
   outline-offset: 2px;
   border-radius: 6px;
 }
+}
 
-/* Cards: 1px border, no shadow. */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); }
+@layer components {
+/* Surfaces */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--elev-card);
+}
+.card-link { transition: box-shadow 150ms ease, transform 150ms ease; }
+.card-link:hover { box-shadow: var(--elev-raised); transform: translateY(-1px); }
+.panel {
+  background: var(--blue-50);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius-panel);
+}
+}
 
-/* Tone scopes: set the three colours once, then use them from components. */
-.tone-positive { --t-fg: var(--positive-fg); --t-bg: var(--positive-bg); --t-fill: var(--positive-fill); }
-.tone-caution { --t-fg: var(--caution-fg); --t-bg: var(--caution-bg); --t-fill: var(--caution-fill); }
-.tone-negative { --t-fg: var(--negative-fg); --t-bg: var(--negative-bg); --t-fill: var(--negative-fill); }
-.tone-high { --t-fg: var(--high-fg); --t-bg: var(--high-bg); --t-fill: var(--high-fill); }
-.tone-neutral { --t-fg: var(--neutral-fg); --t-bg: var(--neutral-bg); --t-fill: var(--neutral-fill); }
-.tone-info { --t-fg: var(--info-fg); --t-bg: var(--info-bg); --t-fill: var(--info-fill); }
+/* Page washes (DESIGN 2.1): headers and the entry screen only, never behind data. */
+.bg-hero {
+  background-color: var(--page);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--blue-600) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--blue-600) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, var(--hero-start) 0%, var(--hero-mid) 55%, var(--page) 100%);
+  background-size: 48px 48px, 48px 48px, 100% 100%;
+}
+.bg-footer { background: linear-gradient(180deg, var(--blue-600), var(--blue-700)); }
 
-.num { font-variant-numeric: tabular-nums; }
+@layer components {
+/* Buttons (DESIGN 4.1) */
+.btn {
+  display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 0.5rem;
+  border-radius: 9999px; padding: 0 1.5rem; font-weight: 600; white-space: nowrap;
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+.btn:disabled { cursor: not-allowed; opacity: 0.55; }
+.btn-primary {
+  color: #fff;
+  background: linear-gradient(180deg, var(--btn-top) 0%, var(--blue-600) 100%);
+  box-shadow: var(--elev-glow);
+}
+.btn-primary:hover:not(:disabled) { background: var(--blue-700); transform: translateY(-1px); }
+.btn-secondary { color: var(--ink-900); background: var(--card); border: 1px solid var(--line); }
+.btn-secondary:hover:not(:disabled) { background: var(--blue-50); }
+.btn-tertiary { min-height: 44px; padding: 0 0.5rem; color: var(--blue-600); }
+.btn-tertiary:hover:not(:disabled) { text-decoration: underline; }
+.btn-flag { color: var(--negative-fg); }
+
+/* Weight sliders (DESIGN 4.9): 24px white thumb with a blue border, blue filled track, 44px touch height.
+   Set --fill (for example 30%) on the input to colour the filled part. Arrow keys move in steps of 1. */
+.slider { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: transparent; cursor: pointer; --fill: 0%; }
+.slider::-webkit-slider-runnable-track { height: 8px; border-radius: 9999px; background: linear-gradient(90deg, var(--blue-600) var(--fill), var(--blue-100) var(--fill)); }
+.slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; margin-top: -8px; border-radius: 9999px; background: var(--card); border: 2px solid var(--blue-600); box-shadow: var(--elev-card); }
+.slider::-moz-range-track { height: 8px; border-radius: 9999px; background: var(--blue-100); }
+.slider::-moz-range-progress { height: 8px; border-radius: 9999px; background: var(--blue-600); }
+.slider::-moz-range-thumb { width: 24px; height: 24px; border-radius: 9999px; background: var(--card); border: 2px solid var(--blue-600); box-shadow: var(--elev-card); }
+/* Keyboard focus rings the thumb (3px ring) rather than the whole 44px-tall control. */
+.slider:focus-visible { outline: none; }
+.slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue-500) 45%, transparent), var(--elev-card); }
+.slider:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue-500) 45%, transparent), var(--elev-card); }
+}
+
+/* Tone scopes: set the colours once, then use them from components. */
+.tone-positive { --t-fg: var(--positive-fg); --t-bg: var(--positive-bg); --t-line: var(--positive-line); --t-fill: var(--positive-fill); }
+.tone-caution { --t-fg: var(--caution-fg); --t-bg: var(--caution-bg); --t-line: var(--caution-line); --t-fill: var(--caution-fill); }
+.tone-negative { --t-fg: var(--negative-fg); --t-bg: var(--negative-bg); --t-line: var(--negative-line); --t-fill: var(--negative-fill); }
+.tone-high { --t-fg: var(--high-fg); --t-bg: var(--high-bg); --t-line: var(--high-line); --t-fill: var(--high-fill); }
+.tone-neutral { --t-fg: var(--neutral-fg); --t-bg: var(--neutral-bg); --t-line: var(--neutral-line); --t-fill: var(--neutral-fill); }
+.tone-info { --t-fg: var(--info-fg); --t-bg: var(--info-bg); --t-line: var(--info-line); --t-fill: var(--info-fill); }
+.tone-internal { --t-fg: var(--internal-fg); --t-bg: var(--internal-bg); --t-line: var(--internal-line); --t-fill: var(--internal-fill); }
+
+/* Footer wordmark: ghosted, cropped by the bottom edge (DESIGN 9). */
+.footer-wordmark {
+  position: absolute; inset-inline: 0; bottom: 0; transform: translateY(26%);
+  text-align: center; font-family: var(--font-display); font-weight: 800; line-height: 1;
+  font-size: clamp(120px, 22vw, 320px); color: rgb(255 255 255 / 0.12);
+  user-select: none; pointer-events: none;
+}
+
+@keyframes tab-fade { from { opacity: 0; } to { opacity: 1; } }
+.tab-fade { animation: tab-fade 120ms ease-out; }
+
+@keyframes gen-fill { from { width: 0; } to { width: 100%; } }
 
 @keyframes pulse-soft { 50% { opacity: 0.5; } }
-.skeleton { background: #e6e9f1; border-radius: 8px; animation: pulse-soft 1.6s ease-in-out infinite; }
-
-.leaflet-popup-content a { color: var(--brand); font-weight: 700; }
+.skeleton { background: var(--blue-100); border-radius: var(--radius-tile); animation: pulse-soft 1.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

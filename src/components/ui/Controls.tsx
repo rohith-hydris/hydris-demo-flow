@@ -30,16 +30,16 @@ export function SearchInput({ param = "q", label, placeholder }: { param?: strin
   return (
     <div className="relative w-full sm:w-72">
       <label htmlFor={id} className="sr-only">{label}</label>
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
       <input
         id={id} type="search" value={value} placeholder={placeholder ?? label} autoComplete="off"
         onChange={(e) => { setValue(e.target.value); clearTimeout(timer.current); timer.current = setTimeout(() => push(e.target.value), 300); }}
         onKeyDown={(e) => { if (e.key === "Enter") { clearTimeout(timer.current); push(value); } }}
-        className="min-h-11 w-full rounded-lg border border-line bg-surface pl-9 pr-10 text-base placeholder:text-muted"
+        className="min-h-11 w-full rounded-full border border-line bg-card pl-10 pr-10 text-base placeholder:text-ink-500"
       />
       {value && (
         <button type="button" aria-label="Clear search" onClick={() => { setValue(""); push(""); }}
-          className="absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-md text-muted hover:text-ink">
+          className="absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-md text-ink-500 hover:text-ink-900">
           <X className="size-4" aria-hidden="true" />
         </button>
       )}
@@ -55,7 +55,7 @@ export function FilterChips({ param, label, options, allLabel = "All" }: { param
     return (
       <li key={text}>
         <Link href={hrefWith({ [param]: value || undefined })} scroll={false} aria-current={on ? "true" : undefined}
-          className={`inline-flex min-h-11 items-center rounded-full border px-4 text-base font-semibold ${on ? "border-brand bg-brand text-white" : "border-line bg-surface text-ink hover:border-brand"}`}>
+          className={`inline-flex min-h-11 items-center rounded-full border px-4 text-base font-semibold ${on ? "border-blue-600 bg-blue-600 text-white" : "border-line bg-card text-ink-700 hover:bg-blue-50"}`}>
           {text}
         </Link>
       </li>
@@ -75,11 +75,11 @@ export function SelectControl({ param, label, options, defaultValue }: { param: 
   const id = useId();
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor={id} className="whitespace-nowrap text-base font-semibold text-muted">{label}</label>
+      <label htmlFor={id} className="whitespace-nowrap text-base font-semibold text-ink-500">{label}</label>
       <select
         id={id} value={params.get(param) ?? defaultValue}
         onChange={(e) => router.replace(hrefWith({ [param]: e.target.value === defaultValue ? undefined : e.target.value }), { scroll: false })}
-        className="min-h-11 rounded-lg border border-line bg-surface px-3 text-base"
+        className="min-h-11 rounded-full border border-line bg-card px-4 text-base"
       >
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
