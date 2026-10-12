@@ -117,7 +117,7 @@ export function evaluateScenario(site: FactoryPwi, replenishmentNeededM3: number
     volumetricBalance: balance, volumetricBalanceLow: (baseB + addedB(low)) / replenishmentNeededM3,
     capexLakh, omLakh, grossSavingsLakh, savingsLakh, netSavingsLakh, payback, overlapM3, overlapSavingLakh,
     stewardship: {
-      pwiChangePoints: (c.pwi - site.sitePwi) * 100, balanceChangePoints: (balance - baseBalance) * 100,
+      pwiChangePoints: (c.pwi - site.sitePwiCentral) * 100, balanceChangePoints: (balance - baseBalance) * 100,
       addedM3: total.m3, addedPeople: total.people, addedKg: total.kg,
     },
     benefitState: "Forecast",

@@ -100,7 +100,7 @@ export const scripts: ScriptDef[] = [
     match: [["water", "impact"], ["pwi"], ["positive", "water"]],
     tools: ["get_portfolio_pwi", "get_pwi_grid"],
     blocks: [
-      { kind: "text", text: "{{scope.pwiName}} is **{{portfolio.unweighted}}** unweighted and **{{portfolio.rnWeighted}}** RN-weighted. {{portfolio.weightingNote}}" },
+      { kind: "text", text: "{{scope.pwiName}} is **{{portfolio.unweighted}}** unweighted and **{{portfolio.rnWeighted}}** RN-weighted, counted after the evidence grade rule (central: {{portfolio.unweightedCentral}} and {{portfolio.rnWeightedCentral}}). {{portfolio.weightingNote}}" },
       { kind: "avgGrid" },
       { kind: "text", text: "The weakest area {{scope.phrase}} is **{{weakest.1.label}}** (average cell score {{weakest.1.avg}}), followed by **{{weakest.2.label}}** ({{weakest.2.avg}})." },
       { kind: "text", when: { site: "F12" }, text: "The next best project for {{site.F12.name}} is a basin Quality project (P3 Quality scores {{F12.P3Q}} today because none is registered)." },
@@ -116,7 +116,7 @@ export const scripts: ScriptDef[] = [
     match: [["ambattur", "drop"], ["sub-basin", "drop"], ["score", "drop"], ["why", "dropped"], ["why", "drop"]],
     tools: ["get_ledger_diff"], requiresSite: "F12",
     blocks: [
-      { kind: "text", text: "Sub-basin Availability at **{{site.F12.name}}** moved from **{{ledger.LE-2291.p2a}}** to **{{ledger.LE-2347.p2a}}**. Site PWI moved from {{F12.priorPwi}} to {{F12.pwi}}." },
+      { kind: "text", text: "Sub-basin Availability at **{{site.F12.name}}** moved from **{{ledger.LE-2291.p2a}}** to **{{ledger.LE-2347.p2a}}**. Site PWI (central) moved from {{F12.priorPwi}} to {{F12.pwiCentral}}." },
       {
         kind: "table", columns: ["Entry", "Period", "P2 Availability", "What changed"],
         rows: [

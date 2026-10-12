@@ -4,7 +4,7 @@ import { f12Example } from "@/src/data/f12Example";
 import { factories } from "@/src/data/factories";
 import { pct1, round } from "./format";
 import {
-  buildFactoryPwi, cellScore, cellTargets, internalStatusBand, guideP1Quality, lowValue, p1Quality, pillarScore, replenishmentNeeded,
+  buildFactoryPwi, cellScore, cellTargets, countedValue, internalStatusBand, guideP1Quality, lowValue, p1Quality, pillarScore, replenishmentNeeded,
   sitePwi, volumetricBalance,
 } from "./pwi";
 import { siteChecks } from "./specCheckValues";
@@ -86,21 +86,72 @@ describe("check values for all 14 sites (PRODUCT 5.5)", () => {
   describe.each(siteChecks)("$id", (c) => {
     const p = pwiOf(c.id);
     it(`pillars P1 ${c.P1}, P2 ${c.P2}, P3 ${c.P3}`, () => {
-      expect([p.pillars.P1, p.pillars.P2, p.pillars.P3].map((x) => round(x, 3))).toEqual([c.P1, c.P2, c.P3]);
+      expect([p.pillarsCentral.P1, p.pillarsCentral.P2, p.pillarsCentral.P3].map((x) => round(x, 3))).toEqual([c.P1, c.P2, c.P3]);
     });
-    it(`Site PWI ${c.pwi}%`, () => expect(pct1(p.sitePwi)).toBe(c.pwi));
-    it(`volumetric balance ${c.volumetric}%`, () => expect(pct1(p.volumetricBalance)).toBe(c.volumetric));
-    it(`internal status band ${c.cert}`, () => expect(p.statusBand).toBe(c.cert));
+    it(`Site PWI ${c.pwi}%`, () => expect(pct1(p.sitePwiCentral)).toBe(c.pwi));
+    it(`volumetric balance ${c.volumetric}%`, () => expect(pct1(p.volumetricBalanceCentral)).toBe(c.volumetric));
+    it(`internal status band ${c.cert} from central scores`, () => expect(internalStatusBand(p.sitePwiCentral, p.confidence)).toBe(c.cert));
+  });
+});
+
+describe("evidence grade rule applied to counted values (PRODUCT 6.5)", () => {
+  it("countedValue: A and B give central, C gives the low value, D and none give zero", () => {
+    expect(countedValue(0.8, "A")).toBe(0.8);
+    expect(countedValue(0.8, "B")).toBe(0.8);
+    expect(countedValue(12000, "C")).toBeCloseTo(8400, 6);
+    expect(countedValue(0.8, "D")).toBe(0);
+    expect(countedValue(0.8, "none")).toBe(0);
+  });
+
+  it("F09 (grade C) counts 70% of its central PWI, so its band becomes Not achieved", () => {
+    const p = pwiOf("F09");
+    expect(internalStatusBand(p.sitePwiCentral, p.confidence)).toBe("In progress");
+    expect(p.sitePwi).toBeCloseTo(0.7 * p.sitePwiCentral, 12);
+    expect(p.statusBand).toBe("Not achieved");
+  });
+
+  it("grade A and B sites are unchanged: counted equals central", () => {
+    for (const f of factories.filter((x) => (x.evidenceGrade === "A" || x.evidenceGrade === "B") && x.id !== "F12")) {
+      const p = pwiOf(f.id);
+      expect(p.sitePwi).toBeCloseTo(p.sitePwiCentral, 12);
+      expect(p.volumetricBalance).toBeCloseTo(p.volumetricBalanceCentral, 12);
+      expect(p.pillars).toEqual(p.pillarsCentral);
+    }
+  });
+
+  it("counted never exceeds central", () => {
+    for (const f of factories) {
+      const p = pwiOf(f.id);
+      expect(p.sitePwi).toBeLessThanOrEqual(p.sitePwiCentral + 1e-12);
+    }
   });
 });
 
 describe("F12 worked example (PRODUCT 5.8, 6.6)", () => {
   const p = pwiOf("F12");
 
-  it("Site PWI 69.8%, volumetric balance 73.6%, band In progress", () => {
-    expect(pct1(p.sitePwi)).toBe(69.8);
-    expect(pct1(p.volumetricBalance)).toBe(73.6);
-    expect(p.statusBand).toBe("In progress");
+  it("Site PWI 69.8%, volumetric balance 73.6%, band In progress (central, as in the PRD)", () => {
+    expect(pct1(p.sitePwiCentral)).toBe(69.8);
+    expect(pct1(p.volumetricBalanceCentral)).toBe(73.6);
+    expect(internalStatusBand(p.sitePwiCentral, p.confidence)).toBe("In progress");
+  });
+
+  it("with every F12 cell at grade A or B the counted figures equal the PRD's 69.8%, 73.6% and In progress", () => {
+    // The demo grades F12 P3 Accessibility C (monitoring check overdue). That is a demo choice and lowers the counted
+    // PWI below the PRD's 69.8%. This fixture sets that cell to B so the PRD worked example stays reproducible.
+    const fixture = { ...f12Example, cells: f12Example.cells.map((c) => (c.grade === "C" ? { ...c, grade: "B" as const } : c)) };
+    const f = factories.find((x) => x.id === "F12")!;
+    const q = buildFactoryPwi(f, cellScores.find((c) => c.factoryId === "F12")!, removals.find((r) => r.factoryId === "F12")!, fixture);
+    expect(q.cells.every((c) => c.score === 0 || c.grade === "A" || c.grade === "B")).toBe(true);
+    expect(pct1(q.sitePwi)).toBe(69.8);
+    expect(pct1(q.volumetricBalance)).toBe(73.6);
+    expect(q.statusBand).toBe("In progress");
+  });
+
+  it("as demoed, the grade C on P3 Accessibility lowers counted PWI below the central 69.8%", () => {
+    expect(p.sitePwi).toBeLessThan(p.sitePwiCentral);
+    expect(p.cells.find((c) => c.pillar === "P3" && c.dimension === "Accessibility")!.counted).toBeCloseTo(0.7 * p.cells.find((c) => c.pillar === "P3" && c.dimension === "Accessibility")!.score, 12);
+    expect(p.volumetricBalance).toBeCloseTo(p.volumetricBalanceCentral, 12); // only an Accessibility cell is grade C
   });
 
   it("Guide-compatible figure is 70.7% (P1 Quality scored as 1.0 by the mass-sum rule)", () => {

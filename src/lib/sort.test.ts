@@ -20,8 +20,8 @@ describe("sorting the supplier list (PRODUCT 4.2)", () => {
       "Cauvery Dyeing & Finishing", "Coromandel Denim Mills", "Kongu Knit Processing", "Noyyal Textile Works", "Palar Fabrics",
     ]);
   });
-  it("PWI: weakest RN-weighted figure first", () => {
-    expect(ids(sortSuppliers(suppliers, "pwi"))).toEqual(["SUP2", "SUP1", "SUP5", "SUP3", "SUP4"]);
+  it("PWI: weakest counted RN-weighted figure first", () => {
+    expect(ids(sortSuppliers(suppliers, "pwi"))).toEqual(["SUP2", "SUP1", "SUP3", "SUP5", "SUP4"]);
   });
   it("alerts: most severe first (Critical SUP2, then High SUP1 and SUP5), none last", () => {
     const sorted = sortSuppliers(suppliers, "alerts");

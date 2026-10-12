@@ -57,7 +57,7 @@ export default function RankTable({ sites, ranges, deltas, selectedId, onSelect 
           <span role="columnheader">Tier</span>
           <span role="columnheader">Drivers</span>
           <span role="columnheader" title={RANK_RANGE_TITLE}>Rank range</span>
-          <span role="columnheader" className="text-right">PWI</span>
+          <span role="columnheader" className="text-right">PWI (counted)</span>
           <span role="columnheader" className="text-right" title="Share of risk indicators with a reading. Informational.">Coverage</span>
           <span role="columnheader" className="text-right" title="Share of documents that are Ready. Informational: it never filters, sorts or re-ranks.">Readiness</span>
           <span role="columnheader" className="sr-only">Open</span>

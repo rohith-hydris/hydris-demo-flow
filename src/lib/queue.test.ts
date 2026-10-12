@@ -64,7 +64,7 @@ describe("summary tiles (PRODUCT 4.6)", () => {
   it("claimed against accepted benefit, per unit and never mixed", () => {
     const s = claimSummary(brand);
     expect(s.claimed.m3).toBe(255600);
-    expect(s.accepted.m3).toBe(153000);
+    expect(s.accepted.m3).toBe(149400);
     expect(s.claimed.people).toBe(4350);
     expect(s.accepted.people).toBe(2550);
     expect(s.claimed.kg).toEqual({ tss: 2500, tn: 200, tp: 40 });

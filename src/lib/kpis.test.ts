@@ -7,10 +7,11 @@ describe("KPI strips (PRODUCT 4.2, DESIGN 5.2)", () => {
   const brand = portfolioKpis(getPortfolio(scopeFor("brand")), "brand");
   const byLabel = (label: string) => brand.find((k) => k.label === label)!;
 
-  it("brand: PWI shows 68.9% unweighted beside 62.6% RN-weighted with the caption", () => {
+  it("brand: counted PWI 64.3% unweighted and 56.0% RN-weighted, with central 68.9% and 62.6% beside with the caption", () => {
     const k = byLabel("Portfolio PWI");
-    expect(k.value).toBe("68.9%");
-    expect(k.extra).toEqual([{ label: "RN-weighted", value: "62.6%" }]);
+    expect(k.value).toBe("64.3%");
+    expect(k.valueLabel).toBe("Unweighted, counted");
+    expect(k.extra).toEqual([{ label: "RN-weighted, counted", value: "56.0%" }, { label: "Central", value: "68.9% / 62.6%" }]);
     expect(k.context).toContain("RN-weighted stops a small site hiding a large one");
   });
 
@@ -29,11 +30,11 @@ describe("KPI strips (PRODUCT 4.2, DESIGN 5.2)", () => {
     expect(k.find((x) => x.label === "Plants off-track")!.value).toBe(1);
   });
 
-  it("supplier detail totals for Kongu Knit Processing: R 0.66, PWI 64.2% / 58.5%, RN 280,000", () => {
+  it("supplier detail totals for Kongu Knit Processing: R 0.66, counted PWI 59.4% / 51.3% (central 64.2% / 58.5%), RN 280,000", () => {
     const k = supplierKpis(getSupplier(scopeFor("brand"), "SUP1")!);
     const get = (label: string) => k.find((x) => x.label.startsWith(label))!;
     expect(get("Average risk").value).toBe("0.66");
-    expect(get("PWI")).toMatchObject({ value: "64.2%", extra: [{ label: "RN-weighted", value: "58.5%" }] });
+    expect(get("PWI")).toMatchObject({ value: "59.4%", extra: [{ label: "RN-weighted, counted", value: "51.3%" }, { label: "Central", value: "64.2% / 58.5%" }] });
     expect(get("Replenishment").value).toBe("280,000");
     expect(get("Average plant health").value).toBe(77); // (78 + 61 + 91) / 3 = 76.67
   });

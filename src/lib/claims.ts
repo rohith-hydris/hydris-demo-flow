@@ -2,7 +2,7 @@ import { documents } from "@/src/data/documents";
 import { inspections } from "@/src/data/inspections";
 import { projects } from "@/src/data/projects";
 import type { ClaimAmount, DocumentRecord, InspectionRecord, ProjectRecord } from "@/src/data/types";
-import { lowValue } from "./pwi";
+import { countedValue, lowValue } from "./pwi";
 import { countsTowardPwi } from "./states";
 import type { FactoryId, ProjectStatus, ReadinessState } from "./types";
 
@@ -14,7 +14,7 @@ export const READINESS_STATES: readonly ReadinessState[] = ["Ready", "Missing", 
 export interface ProjectBenefit {
   /** The claimed amount after attribution f: 50,000 x 50% = 25,000. */
   attributed: ClaimAmount;
-  /** What counts today: the attributed amount for Validated claims, zero for Flagged and Not counted. */
+  /** What counts today: the attributed amount after the evidence grade rule for Validated claims (grade C counts the low value), zero for Flagged and Not counted. */
   counted: ClaimAmount;
   /** Low value of the counted amount after the evidence grade rule. */
   low: ClaimAmount;
@@ -29,7 +29,7 @@ export function projectBenefit(p: ProjectRecord): ProjectBenefit {
   const attributed = scale(p.claim, p.attribution);
   // V2 Section 2: a benefit counts only when it is Validated on an eligible claim. Evidence acceptance alone never counts it.
   const counts = countsTowardPwi(p.states);
-  const counted = counts ? attributed : scale(attributed, 0);
+  const counted = counts ? scale(attributed, countedValue(1, p.grade)) : scale(attributed, 0);
   const low = counts ? scale(attributed, lowValue(1, p.grade)) : scale(attributed, 0);
   return { attributed, counted, low, provisional: p.status === "Pending validation" };
 }

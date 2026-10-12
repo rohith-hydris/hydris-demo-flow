@@ -22,6 +22,14 @@ export const REMOVAL_TARGET = 0.9;
 export const GRADE_FACTORS: Record<CellGrade, number> = { A: 0.95, B: 0.85, C: 0.7, D: 0, none: 0 };
 export const lowValue = (value: number, grade: CellGrade) => value * GRADE_FACTORS[grade];
 
+/**
+ * Evidence grade rule applied to a value (PRODUCT 6.5): A and B count the central value, C counts the low value
+ * (central x 0.70), D and no grade count zero. This is the value that feeds pillars, site PWI and the status band.
+ */
+export function countedValue(central: number, grade: CellGrade): number {
+  return grade === "A" || grade === "B" ? central : lowValue(central, grade);
+}
+
 export interface CellScoreResult {
   /** The computed cell score, or null when no score is computed (Missing, Not applicable). */
   score: number | null;
@@ -141,6 +149,8 @@ export interface PwiCell {
   score: number;
   /** Low value of the score after the evidence grade rule. */
   low: number;
+  /** Counted score after the evidence grade rule: central for A and B, low for C, zero for D. Feeds the pillars. */
+  counted: number;
   state: CellState; stateNote: string | null;
   /** V2 4.1: every cell carries a target state. Demo cells all have a defined target above zero. */
   targetState: TargetState;
@@ -154,10 +164,15 @@ export interface PwiCell {
 export interface FactoryPwi {
   factoryId: FactoryId;
   cells: PwiCell[]; // 9 cells, pillar-major
+  /** Pillars from counted cell scores (the headline), and from central scores for comparison. */
   pillars: Record<Pillar, number>;
+  pillarsCentral: Record<Pillar, number>;
   pillarsLow: Record<Pillar, number>;
-  sitePwi: number; sitePwiLow: number;
-  volumetricBalance: number;
+  /** Headline site PWI from counted cell scores. sitePwiCentral is the same site before the evidence grade rule. */
+  sitePwi: number; sitePwiCentral: number; sitePwiLow: number;
+  /** From counted Availability scores; volumetricBalanceCentral is before the evidence grade rule. */
+  volumetricBalance: number; volumetricBalanceCentral: number;
+  /** Internal status band, from counted PWI. */
   confidence: number; statusBand: StatusBand;
   evidenceGrade: EvidenceGrade;
   /** Only the F12 worked example carries the Guide-compatible comparison (PRODUCT 6.6). */
@@ -207,7 +222,7 @@ export function buildFactoryPwi(
       const state = w ? w.state : derived.state;
       const grade: CellGrade = w ? w.grade : score === 0 ? "none" : factory.evidenceGrade;
       cells.push({
-        pillar, dimension, score, low: lowValue(score, grade), state, targetState: "Defined",
+        pillar, dimension, score, low: lowValue(score, grade), counted: countedValue(score, grade), state, targetState: "Defined",
         stateNote: w ? (w.stateNote ?? null) : derived.note,
         grade, target, delivered, breakdown: w?.breakdown ?? [],
         gap: gapText(pillar, dimension, state, score),
@@ -215,24 +230,27 @@ export function buildFactoryPwi(
     }
   }
 
-  const get = (p: Pillar, d: Dimension, key: "score" | "low") => cells.find((c) => c.pillar === p && c.dimension === d)![key];
-  const pillarsBy = (key: "score" | "low") =>
+  const get = (p: Pillar, d: Dimension, key: "score" | "low" | "counted") => cells.find((c) => c.pillar === p && c.dimension === d)![key];
+  const pillarsBy = (key: "score" | "low" | "counted") =>
     Object.fromEntries(PILLARS.map((p) => [p, pillarScore(get(p, "Availability", key), get(p, "Accessibility", key), get(p, "Quality", key))])) as Record<Pillar, number>;
-  const pillars = pillarsBy("score");
+  const pillars = pillarsBy("counted");
+  const pillarsCentral = pillarsBy("score");
   const pillarsLow = pillarsBy("low");
   const pwi = sitePwi(pillars.P1, pillars.P2, pillars.P3);
+  const pwiCentral = sitePwi(pillarsCentral.P1, pillarsCentral.P2, pillarsCentral.P3);
 
   let guide: FactoryPwi["guide"] = null;
   if (worked) {
     const gq = guideP1Quality(worked.baselineLoadsKg, removal);
     const p1 = pillarScore(get("P1", "Availability", "score"), get("P1", "Accessibility", "score"), gq);
-    guide = { p1Quality: gq, p1, sitePwi: sitePwi(p1, pillars.P2, pillars.P3) };
+    guide = { p1Quality: gq, p1, sitePwi: sitePwi(p1, pillarsCentral.P2, pillarsCentral.P3) };
   }
 
   return {
-    factoryId: factory.id, cells, pillars, pillarsLow, sitePwi: pwi,
+    factoryId: factory.id, cells, pillars, pillarsCentral, pillarsLow, sitePwi: pwi, sitePwiCentral: pwiCentral,
     sitePwiLow: sitePwi(pillarsLow.P1, pillarsLow.P2, pillarsLow.P3),
-    volumetricBalance: volumetricBalance(get("P1", "Availability", "score"), get("P2", "Availability", "score"), get("P3", "Availability", "score")),
+    volumetricBalance: volumetricBalance(get("P1", "Availability", "counted"), get("P2", "Availability", "counted"), get("P3", "Availability", "counted")),
+    volumetricBalanceCentral: volumetricBalance(get("P1", "Availability", "score"), get("P2", "Availability", "score"), get("P3", "Availability", "score")),
     confidence: factory.confidence, statusBand: internalStatusBand(pwi, factory.confidence),
     evidenceGrade: factory.evidenceGrade, guide,
   };

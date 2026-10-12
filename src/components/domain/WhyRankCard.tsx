@@ -34,7 +34,7 @@ export default function WhyRankCard({ site, scopeSites, range, weightsChanged }:
           <dt className="text-ink-700">Rank range</dt>
           <dd className="flex items-center gap-2"><span className="num font-semibold text-ink-900">{range.low === range.high ? range.low : `${range.low} to ${range.high}`}</span>{range.unstable && <StatusPill tone="caution" shape="diamond" label="Rank unstable" />}</dd>
         </div>
-        <div className="flex justify-between gap-2"><dt className="text-ink-700">Site PWI</dt><dd className="num font-semibold text-ink-900">{fmtPct1(site.pwi.sitePwi)}</dd></div>
+        <div className="flex justify-between gap-2"><dt className="text-ink-700">Site PWI (counted)</dt><dd className="num font-semibold text-ink-900">{fmtPct1(site.pwi.sitePwi)} <span className="font-normal text-ink-500">· {fmtPct1(site.pwi.sitePwiCentral)} central</span></dd></div>
       </dl>
       <p className="mt-3 text-sm text-ink-500">{RANK_RANGE_NOTE}</p>
 

@@ -197,7 +197,7 @@ describe("V2 12: scenarios", () => {
     expect(scen("S1").stewardship.pwiChangePoints).toBeGreaterThan(scen("S2").stewardship.pwiChangePoints * 10);
   });
   it("targets stay frozen: the forecast never changes the baseline", () => {
-    expect(pct(f12().sitePwi)).toBe(69.8);
+    expect(pct(f12().sitePwiCentral)).toBe(69.8);
   });
 });
 

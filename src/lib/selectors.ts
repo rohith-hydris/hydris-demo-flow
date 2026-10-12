@@ -121,7 +121,7 @@ export function getRankRanges(scope: Scope, weights: Weights = DEFAULT_WEIGHTS):
 
 const toRollupSites = (sites: Site[]) =>
   sites.map((s) => ({
-    R: s.R, pwi: s.pwi.sitePwi, volumetricBalance: s.pwi.volumetricBalance,
+    R: s.R, pwi: s.pwi.sitePwi, pwiCentral: s.pwi.sitePwiCentral, volumetricBalance: s.pwi.volumetricBalance,
     replenishmentNeededM3: s.replenishmentNeededM3, healthScore: s.healthScore,
   }));
 

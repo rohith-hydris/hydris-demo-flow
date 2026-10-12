@@ -51,7 +51,7 @@ export default function OverviewTab({ site, scopeSites, onTab }: { site: Site; s
           label="Footprint I" value={site.footprintI === null ? "Pending" : fmtScore(site.footprintI)} trace={traceFootprint(site)}
           context={LARGE_FOOTPRINT_NOTE}
         />
-        <StatTile label="Site PWI" value={fmtPct1(site.pwi.sitePwi)} trace={traceSitePwi(site)} extra={<StatusBandField band={site.pwi.statusBand} />} context="Positive Water Impact" />
+        <StatTile label="Site PWI" value={fmtPct1(site.pwi.sitePwi)} trace={traceSitePwi(site)} extra={<StatusBandField band={site.pwi.statusBand} />} context={`Counted after the evidence grade rule. Central ${fmtPct1(site.pwi.sitePwiCentral)}.`} />
         <StatTile label="Confidence" value={fmtScore(site.pwi.confidence)} trace={traceConfidence(site)} context={`Evidence grade ${site.evidenceGrade}`} />
       </ul>
 

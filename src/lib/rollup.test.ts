@@ -17,8 +17,8 @@ describe("supplier roll-ups (PRODUCT 5.5, 6.7)", () => {
   describe.each(supplierChecks)("$id", (c) => {
     const s = suppliers.find((x) => x.id === c.id)!;
     it(`average R ${c.avgR}`, () => expect(round(s.rollup.avgR, 2)).toBe(c.avgR));
-    it(`PWI unweighted ${c.pwiUnweighted}`, () => expect(pct1(s.rollup.pwiUnweighted)).toBe(c.pwiUnweighted));
-    it(`PWI RN-weighted ${c.pwiRnWeighted}`, () => expect(pct1(s.rollup.pwiRnWeighted)).toBe(c.pwiRnWeighted));
+    it(`central PWI unweighted ${c.pwiUnweighted}`, () => expect(pct1(s.rollup.pwiUnweightedCentral)).toBe(c.pwiUnweighted));
+    it(`central PWI RN-weighted ${c.pwiRnWeighted}`, () => expect(pct1(s.rollup.pwiRnWeightedCentral)).toBe(c.pwiRnWeighted));
     it(`total RN ${c.totalRn} m3`, () => expect(s.rollup.totalRnM3).toBe(c.totalRn));
   });
 
@@ -36,8 +36,13 @@ describe("brand portfolio (PRODUCT 4.2, 5.5)", () => {
   const p = getPortfolio(brand);
 
   it("shows both PWI figures: 68.9 unweighted and 62.6 RN-weighted", () => {
-    expect(pct1(p.rollup.pwiUnweighted)).toBe(portfolioCheck.pwiUnweighted);
-    expect(pct1(p.rollup.pwiRnWeighted)).toBe(portfolioCheck.pwiRnWeighted);
+    expect(pct1(p.rollup.pwiUnweightedCentral)).toBe(portfolioCheck.pwiUnweighted);
+    expect(pct1(p.rollup.pwiRnWeightedCentral)).toBe(portfolioCheck.pwiRnWeighted);
+  });
+
+  it("the headline counted figures are lower than the central ones because grade C sites count the low value", () => {
+    expect(p.rollup.pwiUnweighted).toBeLessThan(p.rollup.pwiUnweightedCentral);
+    expect(p.rollup.pwiRnWeighted).toBeLessThan(p.rollup.pwiRnWeightedCentral);
   });
 
   it("the RN-weighted figure is the weaker one", () => {
@@ -65,8 +70,8 @@ describe("rollup()", () => {
   });
 
   it("RN weighting lets a large weak site pull the figure down", () => {
-    const small = { R: 0.5, pwi: 0.9, volumetricBalance: 0.9, replenishmentNeededM3: 1000, healthScore: 90 };
-    const large = { R: 0.5, pwi: 0.3, volumetricBalance: 0.3, replenishmentNeededM3: 99000, healthScore: 50 };
+    const small = { R: 0.5, pwi: 0.9, pwiCentral: 0.9, volumetricBalance: 0.9, replenishmentNeededM3: 1000, healthScore: 90 };
+    const large = { R: 0.5, pwi: 0.3, pwiCentral: 0.3, volumetricBalance: 0.3, replenishmentNeededM3: 99000, healthScore: 50 };
     const r = rollup([small, large]);
     expect(r.pwiUnweighted).toBeCloseTo(0.6, 12);
     expect(r.pwiRnWeighted).toBeCloseTo(0.306, 12);

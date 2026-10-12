@@ -38,10 +38,11 @@ describe("F12 impact grid matches PRODUCT 5.8 exactly", () => {
     expect(row(p, d)).toEqual(expected);
   });
 
-  it("pillars 0.954 / 0.758 / 0.382, Site PWI 69.8%, volumetric balance 73.6%, band In progress, confidence 0.78", () => {
-    expect([f12.pwi.pillars.P1, f12.pwi.pillars.P2, f12.pwi.pillars.P3].map(fmtScore3)).toEqual(["0.954", "0.758", "0.382"]);
-    expect(fmtPct1(f12.pwi.sitePwi)).toBe("69.8%");
-    expect(fmtPct1(f12.pwi.volumetricBalance)).toBe("73.6%");
+  it("central pillars 0.954 / 0.758 / 0.382, Site PWI 69.8%, volumetric balance 73.6%; counted 68.3% (grade C on P3 Accessibility is a demo choice)", () => {
+    expect([f12.pwi.pillarsCentral.P1, f12.pwi.pillarsCentral.P2, f12.pwi.pillarsCentral.P3].map(fmtScore3)).toEqual(["0.954", "0.758", "0.382"]);
+    expect(fmtPct1(f12.pwi.sitePwiCentral)).toBe("69.8%");
+    expect(fmtPct1(f12.pwi.volumetricBalanceCentral)).toBe("73.6%");
+    expect(fmtPct1(f12.pwi.sitePwi)).toBe("68.3%");
     expect(f12.pwi.statusBand).toBe("In progress");
     expect(f12.pwi.confidence).toBe(0.78);
   });
@@ -49,7 +50,7 @@ describe("F12 impact grid matches PRODUCT 5.8 exactly", () => {
   it("Guide-compatible toggle: 70.7% with P1 Quality scored as 1.0, against 69.8% for PWI-M 1.0", () => {
     expect(fmtPct1(f12.pwi.guide!.sitePwi)).toBe("70.7%");
     expect(fmtScore3(f12.pwi.guide!.p1)).toBe("0.982");
-    expect(fmtPct1(f12.pwi.sitePwi)).toBe("69.8%");
+    expect(fmtPct1(f12.pwi.sitePwiCentral)).toBe("69.8%");
     expect(METHOD_VERSION).toBe("PWI-M 1.0");
     expect(GUIDE_CAPTION).toBe("Shows the effect of the proposed PWI-M 1.0 corrections. Reconciliation of the 20 source issues is pending.");
     expect(GUIDE_CAPTION).not.toMatch(/corrects 20|resolved/i);
@@ -171,10 +172,12 @@ describe("traceability drawer content (PRODUCT 1, DESIGN 4.12)", () => {
 
   it("Site PWI: value, formula, inputs, method PWI-M 1.0 and grade", () => {
     const t = traceSitePwi(f12);
-    expect(t.value).toBe("69.8%");
-    expect(t.formula[0]).toBe("Site PWI = (P1 + P2 + P3) ÷ 3");
+    expect(t.title).toBe("Site PWI (counted)");
+    expect(t.value).toBe("68.3%");
+    expect(t.formula[0]).toBe("Site PWI = (P1 + P2 + P3) ÷ 3, from counted cell scores");
     expect(t.inputs.map((i) => [i.label, i.value])).toEqual([
-      ["P1, site", "0.954"], ["P2, sub-basin", "0.758"], ["P3, basin", "0.382"], ["Site confidence", "0.78"],
+      ["P1, site (counted)", "0.954"], ["P2, sub-basin (counted)", "0.758"], ["P3, basin (counted)", "0.336"],
+      ["Site PWI, central", "69.8%"], ["Site confidence", "0.78"],
     ]);
     expect(t.method).toEqual({ name: "Positive Water Impact", version: "PWI-M 1.0" });
     expect(t.grade!.grade).toBe("B");

@@ -26,9 +26,10 @@ describe("project claims (PRODUCT 5.10)", () => {
     expect(b.low).toEqual({ unit: "m3", value: 21250 });
   });
 
-  it("PRJ-401: grade C lower bound 8,400 of 12,000", () => {
+  it("PRJ-401: grade C counts the lower bound, 8,400 of 12,000", () => {
     const b = projectBenefit(project("PRJ-401"));
-    expect(b.counted).toEqual({ unit: "m3", value: 12000 });
+    expect((b.counted as { value: number }).value).toBeCloseTo(8400, 6);
+    expect(b.attributed).toEqual({ unit: "m3", value: 12000 });
     expect((b.low as { value: number }).value).toBeCloseTo(8400, 6);
   });
 

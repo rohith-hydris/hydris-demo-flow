@@ -37,13 +37,14 @@ describe("tokens (PRODUCT 0.3): every figure comes from the data layer", () => {
   it("accepts the spec's own spellings: {{F12.R}} and {{site.F12.pwi}}", () => {
     expect(resolveToken("F12.R", brandCtx)).toBe("0.84");
     expect(resolveToken("site.F12.R", brandCtx)).toBe("0.84");
-    expect(resolveToken("site.F12.pwi", brandCtx)).toBe("69.8%");
+    expect(resolveToken("site.F12.pwi", brandCtx)).toBe("68.3%"); // counted: the demo's grade C on P3 Accessibility
+    expect(resolveToken("site.F12.pwiCentral", brandCtx)).toBe("69.8%"); // the PRD worked example
   });
 
   it("site figures match the check values", () => {
     const t = (p: string) => resolveToken(p, brandCtx);
-    expect([t("F12.R"), t("F12.I"), t("F12.pwi"), t("F12.vb"), t("F12.conf"), t("F12.grade"), t("F12.tier"), t("F12.band")]).toEqual(["0.84", "0.91", "69.8%", "73.6%", "0.78", "B", "1", "1"]);
-    expect([t("F12.P1"), t("F12.P2"), t("F12.P3")]).toEqual(["0.954", "0.758", "0.382"]);
+    expect([t("F12.R"), t("F12.I"), t("F12.pwiCentral"), t("F12.vb"), t("F12.conf"), t("F12.grade"), t("F12.tier"), t("F12.band")]).toEqual(["0.84", "0.91", "69.8%", "73.6%", "0.78", "B", "1", "1"]);
+    expect([t("F12.P1"), t("F12.P2"), t("F12.P3")]).toEqual(["0.954", "0.758", "0.336"]); // counted pillars
     expect([t("F12.P2A"), t("F12.P3A"), t("F12.P3Q"), t("F02.P2A")]).toEqual(["0.795", "0.568", "0.00", "0.45"]);
     expect([t("F02.P2A.state"), t("F12.P3Q.state"), t("F12.P3W.grade")]).toEqual(["Partially scored", "Missing input", "C"]);
     expect([t("F12.bws"), t("F01.grade"), t("F02.tierChangeAge"), t("F12.priorPwi")]).toEqual(["4.75", "B", "12", "70.3%"]);
@@ -51,7 +52,8 @@ describe("tokens (PRODUCT 0.3): every figure comes from the data layer", () => {
 
   it("portfolio, ranking and weakest-area tokens", () => {
     const t = (p: string) => resolveToken(p, brandCtx);
-    expect([t("portfolio.unweighted"), t("portfolio.rnWeighted")]).toEqual(["68.9%", "62.6%"]);
+    expect([t("portfolio.unweightedCentral"), t("portfolio.rnWeightedCentral")]).toEqual(["68.9%", "62.6%"]);
+    expect([t("portfolio.unweighted"), t("portfolio.rnWeighted")]).toEqual(["64.3%", "56.0%"]); // counted
     expect([t("rank.1.name"), t("rank.2.name"), t("rank.top2.tiers"), t("rank.1.band")]).toEqual(["Ambattur Denim Unit", "Avinashi Road Dye House", "Both are Tier 1.", "1"]);
     expect([t("weakest.1.label"), t("weakest.2.label")]).toEqual(["P3 Basin Quality", "P3 Basin Availability"]);
     expect(t("scope.pwiName")).toBe("Portfolio PWI");
@@ -94,8 +96,10 @@ describe("tokens (PRODUCT 0.3): every figure comes from the data layer", () => {
   });
 
   it("scope tokens follow the supplier role: own scope numbers", () => {
-    expect(resolveToken("portfolio.unweighted", ownCtx)).toBe("65.9%");
-    expect(resolveToken("portfolio.rnWeighted", ownCtx)).toBe("66.0%");
+    expect(resolveToken("portfolio.unweightedCentral", ownCtx)).toBe("65.9%");
+    expect(resolveToken("portfolio.rnWeightedCentral", ownCtx)).toBe("66.0%");
+    expect(resolveToken("portfolio.unweighted", ownCtx)).toBe("60.0%");
+    expect(resolveToken("portfolio.rnWeighted", ownCtx)).toBe("60.3%");
     expect(resolveToken("portfolio.weightingNote", ownCtx)).toContain("not lower than the unweighted one");
     expect(resolveToken("scope.pwiName", ownCtx)).toBe("PWI across your factories");
     expect(resolveToken("offtrack.sentence", ownCtx)).toBe("One plant needs attention:");
@@ -136,10 +140,10 @@ describe("scripts C1 to C6 (PRODUCT 7)", () => {
     expect(block(a, "actions").items[0]).toMatchObject({ label: "Open ranking", href: "/ranking" });
   });
 
-  it("C2: portfolio PWI 68.9% and 62.6%, the weaker-figure sentence, weakest areas, the Ambattur project, and no Net Positive", () => {
+  it("C2: portfolio PWI counted 64.3% and 56.0% beside central 68.9% and 62.6%, the weaker-figure sentence, weakest areas, the Ambattur project, and no Net Positive", () => {
     const a = answerOf("C2");
     expect(a.tools).toEqual(["get_portfolio_pwi", "get_pwi_grid"]);
-    expect(texts(a)[0]).toBe("Portfolio PWI is **68.9%** unweighted and **62.6%** RN-weighted. The weaker figure is the one to watch because it weights large sites by how much water they need to replenish.");
+    expect(texts(a)[0]).toBe("Portfolio PWI is **64.3%** unweighted and **56.0%** RN-weighted, counted after the evidence grade rule (central: 68.9% and 62.6%). The weaker figure is the one to watch because it weights large sites by how much water they need to replenish.");
     expect(block(a, "avgGrid").weakest).toEqual(["P3 Basin Quality", "P3 Basin Availability"]);
     expect(block(a, "avgGrid").cells).toHaveLength(9);
     expect(texts(a)[1]).toBe("The weakest area across the network is **P3 Basin Quality** (average cell score 0.28), followed by **P3 Basin Availability** (0.48).");
@@ -153,7 +157,7 @@ describe("scripts C1 to C6 (PRODUCT 7)", () => {
   it("C3: sub-basin Availability 0.836 to 0.795, PWI 70.3% to 69.8%, and the cause is an input, not a lost project", () => {
     const a = answerOf("C3");
     expect(a.tools).toEqual(["get_ledger_diff"]);
-    expect(texts(a)[0]).toBe("Sub-basin Availability at **Ambattur Denim Unit** moved from **0.836** to **0.795**. Site PWI moved from 70.3% to 69.8%.");
+    expect(texts(a)[0]).toBe("Sub-basin Availability at **Ambattur Denim Unit** moved from **0.836** to **0.795**. Site PWI (central) moved from 70.3% to 69.8%.");
     expect(block(a, "table").rows).toEqual([
       ["LE-2291", "Aug 2026", "0.836", "Desilting at 1.6 fills per year"],
       ["LE-2347", "Sep 2026", "0.795", "Desilting recomputed to 1.5 fills per year after an IMD rainfall update"],
@@ -542,7 +546,7 @@ describe("agents, prompts and scope", () => {
     const c1 = buildAnswer(script("C1"), ctx);
     expect(texts(c1)[0]).toBe("Start with **Avinashi Road Dye House**, then **Tiruppur Mill**. Both are Tier 1.".replace("Both are Tier 1.", "They are Tier 1 and Tier 2."));
     expect(block(c1, "ranking").rows.map((r) => r.id)).toEqual(["F02", "F01", "F03"]);
-    expect(texts(buildAnswer(script("C2"), ctx))[0]).toContain("PWI across Kongu Knit Processing is **64.2%** unweighted and **58.5%** RN-weighted.");
+    expect(texts(buildAnswer(script("C2"), ctx))[0]).toContain("PWI across Kongu Knit Processing is **59.4%** unweighted and **51.3%** RN-weighted, counted after the evidence grade rule (central: 64.2% and 58.5%).");
     expect(texts(buildAnswer(script("C2"), ctx)).some((t) => t.includes("Ambattur"))).toBe(false);
   });
 
@@ -556,7 +560,7 @@ describe("agents, prompts and scope", () => {
     expect(block(c4, "offTrack").groups[0].plants[0].id).toBe("F13");
     expect(texts(c4)[1]).toBe("The other 2 plants are on track.");
     const c2 = buildAnswer(script("C2"), ownCtx);
-    expect(texts(c2)[0]).toBe("PWI across your factories is **65.9%** unweighted and **66.0%** RN-weighted. The RN-weighted figure is not lower than the unweighted one, so no large site is hiding a weak one.");
+    expect(texts(c2)[0]).toBe("PWI across your factories is **60.0%** unweighted and **60.3%** RN-weighted, counted after the evidence grade rule (central: 65.9% and 66.0%). The RN-weighted figure is not lower than the unweighted one, so no large site is hiding a weak one.");
   });
 });
 

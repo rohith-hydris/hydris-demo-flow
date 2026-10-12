@@ -55,31 +55,34 @@ export function cellDetail(cell: PwiCell): { target: string | null; delivered: s
 export function traceSitePwi(site: Site): Trace {
   const p = site.pwi;
   return {
-    title: "Site PWI",
+    title: "Site PWI (counted)",
     value: fmtPct1(p.sitePwi),
     formula: [
-      "Site PWI = (P1 + P2 + P3) ÷ 3",
+      "Site PWI = (P1 + P2 + P3) ÷ 3, from counted cell scores",
+      "Counted cell score: the central score for evidence grade A and B, the low value (central × 0.70) for grade C, zero for grade D",
       "Pillar score P = 0.40 × Availability + 0.30 × Accessibility + 0.30 × Quality",
     ],
     inputs: [
-      { label: "P1, site", value: fmtScore3(p.pillars.P1), cite: MODULE_IMPACT },
-      { label: "P2, sub-basin", value: fmtScore3(p.pillars.P2), cite: MODULE_IMPACT },
-      { label: "P3, basin", value: fmtScore3(p.pillars.P3), cite: MODULE_IMPACT },
+      { label: "P1, site (counted)", value: fmtScore3(p.pillars.P1), cite: MODULE_IMPACT },
+      { label: "P2, sub-basin (counted)", value: fmtScore3(p.pillars.P2), cite: MODULE_IMPACT },
+      { label: "P3, basin (counted)", value: fmtScore3(p.pillars.P3), cite: MODULE_IMPACT },
+      { label: "Site PWI, central", value: fmtPct1(p.sitePwiCentral), cite: MODULE_IMPACT },
       { label: "Site confidence", value: fmtScore(p.confidence), cite: "Factory master" },
     ],
     method: PWI_METHOD, grade: gradeOf(site.evidenceGrade),
-    note: `Low value after the evidence grade rule: ${fmtPct1(p.sitePwiLow)}.`,
+    note: `Counted ${fmtPct1(p.sitePwi)}, central ${fmtPct1(p.sitePwiCentral)}, low value ${fmtPct1(p.sitePwiLow)}.`,
   };
 }
 
 export function tracePillar(site: Site, pillar: Pillar): Trace {
   const cells = site.pwi.cells.filter((c) => c.pillar === pillar);
   return {
-    title: `Pillar ${pillar}, ${PILLAR_NAMES[pillar].toLowerCase()}`,
+    title: `Pillar ${pillar}, ${PILLAR_NAMES[pillar].toLowerCase()} (counted)`,
     value: fmtScore3(site.pwi.pillars[pillar]),
-    formula: ["P = 0.40 × Availability + 0.30 × Accessibility + 0.30 × Quality"],
-    inputs: cells.map((c) => ({ label: c.dimension, value: fmtCellScore(c.score), cite: MODULE_IMPACT })),
+    formula: ["P = 0.40 × Availability + 0.30 × Accessibility + 0.30 × Quality, from counted cell scores"],
+    inputs: cells.map((c) => ({ label: `${c.dimension} (counted)`, value: fmtCellScore(c.counted), cite: MODULE_IMPACT })),
     method: PWI_METHOD, grade: gradeOf(site.evidenceGrade),
+    note: `Central ${fmtScore3(site.pwi.pillarsCentral[pillar])}. Counted equals central for evidence grade A and B.`,
   };
 }
 
@@ -104,9 +107,9 @@ export function traceCell(site: Site, cell: PwiCell): Trace {
 }
 
 export function traceVolumetric(site: Site): Trace {
-  const a = (p: Pillar) => site.pwi.cells.find((c) => c.pillar === p && c.dimension === "Availability")!.score;
+  const a = (p: Pillar) => site.pwi.cells.find((c) => c.pillar === p && c.dimension === "Availability")!.counted;
   return {
-    title: "Volumetric balance",
+    title: "Volumetric balance (counted)",
     value: fmtPct1(site.pwi.volumetricBalance),
     formula: ["(B_A1 + B_A2 + B_A3) ÷ RN = 0.2 × S_A1 + 0.4 × S_A2 + 0.4 × S_A3"],
     inputs: [
@@ -116,7 +119,7 @@ export function traceVolumetric(site: Site): Trace {
       { label: "Replenishment needed, RN", value: `${fmtInt(site.replenishmentNeededM3)} m³`, cite: "Factory master" },
     ],
     method: PWI_METHOD, grade: gradeOf(site.evidenceGrade),
-    note: "Over 100% means more water was returned than consumed. It is shown apart from PWI and is not part of it.",
+    note: `Central ${fmtPct1(site.pwi.volumetricBalanceCentral)}. Over 100% means more water was returned than consumed. It is shown apart from PWI and is not part of it.`,
   };
 }
 
@@ -133,10 +136,11 @@ export function traceConfidence(site: Site): Trace {
       "Otherwise: Not achieved",
     ],
     inputs: [
-      { label: "Site PWI", value: fmtPct1(site.pwi.sitePwi), cite: MODULE_IMPACT },
+      { label: "Site PWI (counted)", value: fmtPct1(site.pwi.sitePwi), cite: MODULE_IMPACT },
+      { label: "Site PWI (central)", value: fmtPct1(site.pwi.sitePwiCentral), cite: MODULE_IMPACT },
       { label: STATUS_BAND_LABEL, value: `${site.pwi.statusBand}. ${INTERNAL_STATUS_NOTE}` },
       { label: "Evidence grade", value: site.evidenceGrade },
-      { label: "Uncertainty range", value: `${fmtPct1(uncertaintyRange(site.pwi.sitePwi, site.evidenceGrade).low)} to ${fmtPct1(uncertaintyRange(site.pwi.sitePwi, site.evidenceGrade).high)} (${UNCERTAINTY_STATUS})` },
+      { label: "Uncertainty range", value: `${fmtPct1(uncertaintyRange(site.pwi.sitePwiCentral, site.evidenceGrade).low)} to ${fmtPct1(uncertaintyRange(site.pwi.sitePwiCentral, site.evidenceGrade).high)} (${UNCERTAINTY_STATUS})` },
       { label: "Correlations", value: CORRELATION_NOTE },
     ],
     method: PWI_METHOD, grade: gradeOf(site.evidenceGrade),
@@ -197,7 +201,7 @@ export function traceProject(p: ProjectRecord): Trace {
     value: fmtClaim(b.counted),
     formula: [
       "Attributed benefit = claimed benefit × attribution share f",
-      "Counted = attributed benefit once the claim is Validated; zero if Flagged or Not counted",
+      "Counted = attributed benefit once the claim is Validated, after the evidence grade rule (grade C counts the low value); zero if Flagged or Not counted",
       `Low value = counted × grade factor (${p.grade === "none" ? "none" : p.grade}: ${round(factor, 2)})`,
     ],
     inputs: [

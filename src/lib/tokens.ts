@@ -89,6 +89,7 @@ function siteToken(ctx: TokenCtx, id: string, rest: string[], path: string): str
     case "R": return fmtScore(s.R);
     case "I": return s.footprintI === null ? "pending" : fmtScore(s.footprintI);
     case "pwi": return fmtPct1(s.pwi.sitePwi);
+    case "pwiCentral": return fmtPct1(s.pwi.sitePwiCentral);
     case "pwiLow": return fmtPct1(s.pwi.sitePwiLow);
     case "priorPwi": {
       const p = priorMonthSitePwi(s.id);
@@ -152,6 +153,8 @@ function resolveParts(ctx: TokenCtx, parts: string[], path: string): string {
       switch (rest[0]) {
         case "unweighted": return fmtPct1(r.pwiUnweighted);
         case "rnWeighted": return fmtPct1(r.pwiRnWeighted);
+        case "unweightedCentral": return fmtPct1(r.pwiUnweightedCentral);
+        case "rnWeightedCentral": return fmtPct1(r.pwiRnWeightedCentral);
         case "weightingNote":
           return r.pwiRnWeighted < r.pwiUnweighted
             ? "The weaker figure is the one to watch because it weights large sites by how much water they need to replenish."

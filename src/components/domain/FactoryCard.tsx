@@ -74,6 +74,7 @@ export default function FactoryCard({ site }: { site: Site }) {
           <Block title="Positive Water Impact (PWI)">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className={bigNumber}>{fmtPct1(site.pwi.sitePwi)}</span>
+              <span className="text-sm text-ink-500">counted · {fmtPct1(site.pwi.sitePwiCentral)} central</span>
             </div>
             <div className="mt-2"><StatusBandField band={site.pwi.statusBand} /></div>
             <ScoreBar className="mt-2" value={site.pwi.sitePwi} label="Site PWI" valueText={fmtPct1(site.pwi.sitePwi)} />

@@ -21,9 +21,12 @@ export function portfolioKpis(p: Portfolio, role: Role): KpiData[] {
   return [
     {
       label: role === "brand" ? "Portfolio PWI" : "PWI across your factories",
-      value: fmtPct1(p.rollup.pwiUnweighted), valueLabel: "Unweighted",
-      extra: [{ label: "RN-weighted", value: fmtPct1(p.rollup.pwiRnWeighted) }],
-      context: "Positive Water Impact. RN-weighted stops a small site hiding a large one.",
+      value: fmtPct1(p.rollup.pwiUnweighted), valueLabel: "Unweighted, counted",
+      extra: [
+        { label: "RN-weighted, counted", value: fmtPct1(p.rollup.pwiRnWeighted) },
+        { label: "Central", value: `${fmtPct1(p.rollup.pwiUnweightedCentral)} / ${fmtPct1(p.rollup.pwiRnWeightedCentral)}` },
+      ],
+      context: "Positive Water Impact after the evidence grade rule. RN-weighted stops a small site hiding a large one.",
       wide: true,
     },
     { label: "Sites in Band 1", value: p.band1Count, context: `of ${p.factoryCount} sites, risk R of 0.60 or more` },
@@ -41,9 +44,12 @@ export function supplierKpis(s: SupplierView): KpiData[] {
   return [
     { label: "Average risk (R)", value: fmtScore(r.avgR), context: BAND_LABEL[bandOf(r.avgR)] },
     {
-      label: "PWI", value: fmtPct1(r.pwiUnweighted), valueLabel: "Unweighted",
-      extra: [{ label: "RN-weighted", value: fmtPct1(r.pwiRnWeighted) }],
-      context: "Positive Water Impact, both ways", wide: true,
+      label: "PWI", value: fmtPct1(r.pwiUnweighted), valueLabel: "Unweighted, counted",
+      extra: [
+        { label: "RN-weighted, counted", value: fmtPct1(r.pwiRnWeighted) },
+        { label: "Central", value: `${fmtPct1(r.pwiUnweightedCentral)} / ${fmtPct1(r.pwiRnWeightedCentral)}` },
+      ],
+      context: "Positive Water Impact after the evidence grade rule, both ways", wide: true,
     },
     { label: "Volumetric balance", value: fmtPct1(r.volumetricBalance), context: "Water returned against water needed. Shown apart from PWI." },
     { label: "Average plant health", value: Math.round(r.avgHealth), context: `${healthBand(r.avgHealth)}, out of 100` },

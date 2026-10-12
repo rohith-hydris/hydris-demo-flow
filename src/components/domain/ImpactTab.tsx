@@ -40,7 +40,7 @@ export default function ImpactTab({ site }: { site: Site }) {
   const ledger = ledgerFor(site.id);
   const prior = priorMonthSitePwi(site.id);
   const gate = additionalityGate(site.id);
-  const range = uncertaintyRange(pwi.sitePwi, site.evidenceGrade);
+  const range = uncertaintyRange(pwi.sitePwiCentral, site.evidenceGrade);
   const gaps = pwi.cells.filter((c) => c.gap !== null);
   const compliance = gate.excluded.filter((e) => e.reason === "Compliance only");
   const others = gate.excluded.filter((e) => e.reason !== "Compliance only");
@@ -63,18 +63,21 @@ export default function ImpactTab({ site }: { site: Site }) {
             <h3>Site PWI</h3>
             <InfoButton trace={traceSitePwi(site)} />
           </div>
-          <p className="kpi num mt-2 font-display text-kpi text-ink-900" aria-live="polite">{fmtPct1(shown)}</p>
+          <p className="mt-2 text-sm text-ink-500">{guideOn ? "Central, Guide-compatible" : "Counted after the evidence grade rule"}</p>
+          <p className="kpi num font-display text-kpi text-ink-900" aria-live="polite">{fmtPct1(shown)}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBandField band={pwi.statusBand} />
             <span className="flex items-center gap-1 text-ink-700">Confidence {fmtScore(pwi.confidence)} <InfoButton trace={traceConfidence(site)} /></span>
           </div>
           {!guideOn && (
-            <p className="mt-2 text-sm text-ink-500">Low value after the evidence grade rule: <span className="num font-semibold text-ink-700">{fmtPct1(pwi.sitePwiLow)}</span></p>
+            <p className="mt-2 text-sm text-ink-500">
+              Central <span className="num font-semibold text-ink-700">{fmtPct1(pwi.sitePwiCentral)}</span> · Low value <span className="num font-semibold text-ink-700">{fmtPct1(pwi.sitePwiLow)}</span>
+            </p>
           )}
           {prior !== null && (
             <p className="mt-1 text-sm text-ink-500">
-              Prior month <span className="num font-semibold text-ink-700">{fmtPct1(prior)}</span>
-              {` (${sitePwiChange(pwi.sitePwi, prior).direction} ${sitePwiChange(pwi.sitePwi, prior).points} points)`}
+              Prior month (central) <span className="num font-semibold text-ink-700">{fmtPct1(prior)}</span>
+              {` (${sitePwiChange(pwi.sitePwiCentral, prior).direction} ${sitePwiChange(pwi.sitePwiCentral, prior).points} points)`}
             </p>
           )}
 
@@ -85,7 +88,7 @@ export default function ImpactTab({ site }: { site: Site }) {
                 options={[{ value: "pwi-m", label: `${METHOD_VERSION}` }, { value: "guide", label: "Guide-compatible" }]}
               />
               <p className="mt-2 text-sm text-ink-700">
-                {METHOD_VERSION} <span className="num font-semibold">{fmtPct1(pwi.sitePwi)}</span> · Guide-compatible <span className="num font-semibold">{fmtPct1(guide.sitePwi)}</span>
+                {METHOD_VERSION} central <span className="num font-semibold">{fmtPct1(pwi.sitePwiCentral)}</span> · Guide-compatible <span className="num font-semibold">{fmtPct1(guide.sitePwi)}</span>
               </p>
               <p className="mt-1 text-sm text-ink-500">
                 {GUIDE_CAPTION}
@@ -104,7 +107,7 @@ export default function ImpactTab({ site }: { site: Site }) {
               <p className="font-semibold text-ink-700">Volumetric balance</p>
               <InfoButton trace={traceVolumetric(site)} />
             </div>
-            <p className="num font-display text-numlg text-ink-900">{fmtPct1(pwi.volumetricBalance)}</p>
+            <p className="num font-display text-numlg text-ink-900">{fmtPct1(pwi.volumetricBalance)} <span className="text-base font-normal text-ink-500">counted · {fmtPct1(pwi.volumetricBalanceCentral)} central</span></p>
             <p className="text-sm text-ink-500">Water returned against water needed. Over 100% means more returned than consumed. Shown apart from PWI.</p>
           </div>
         </div>
