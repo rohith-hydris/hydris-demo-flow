@@ -216,6 +216,7 @@ export { initiativeCounts, initiativeCountLine, INITIATIVE_STAGES, WHERE_ORDER, 
 export { fundingLabel, fundingOf, commitmentStatus, canCommitReason } from "./funding";
 export { possibleFunders, coverage, claimNote, blockerText, PLACEHOLDER_NOTE } from "./funders";
 export { BASELINE_APPROVER, canApproveBaseline, approverLabel } from "./baseline";
+export const supplierName = (id: string) => suppliers.find((s) => s.id === id)?.name ?? id;
 export const opportunityName = (id: string) => opportunities.find((o) => o.id === id)?.name ?? id;
 export const funderNames = (ids: readonly string[]) => ids.map((id) => allFunders.find((f) => f.id === id)?.name ?? id);
 
