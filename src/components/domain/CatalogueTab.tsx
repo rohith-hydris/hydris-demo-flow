@@ -8,8 +8,10 @@ import { rankOpportunities } from "@/src/lib/catalogue";
 import { fmtScore } from "@/src/lib/format";
 import { catalogueCard, type CatalogueCardView } from "@/src/lib/projectsView";
 import { inScope } from "@/src/lib/scope";
-import { ProposedBadge, StatusPill } from "@/src/components/ui";
-import { ForecastTags, GateList } from "./ProjectsParts";
+import { EmptyState, ProposedBadge, StatusPill } from "@/src/components/ui";
+import { factoryName } from "@/src/lib/selectors";
+import OpportunityFunding from "./OpportunityFunding";
+import { ForecastTags, GateList, SupplierChip, type ProjectsView } from "./ProjectsParts";
 
 type KindFilter = "all" | CatalogueKind;
 const KIND_FILTERS: { value: KindFilter; label: string }[] = [
@@ -26,7 +28,9 @@ const KIND_META: Record<CatalogueKind, { tone: "info" | "neutral" | "internal"; 
 };
 const KindChip = ({ kind }: { kind: CatalogueKind }) => <StatusPill {...KIND_META[kind]} />;
 
-function OpportunityCard({ card, rank }: { card: CatalogueCardView; rank: number | null }) {
+function OpportunityCard({ card, rank, showSupplier }: { card: CatalogueCardView; rank: number | null; showSupplier: boolean }) {
+  const opp = opportunities.find((o) => o.id === card.id)!;
+  const factoryId = opp.factoryId;
   return (
     <li className={`card p-5 ${card.eligible ? "" : "border-dashed border-[var(--neutral-line)] bg-[var(--neutral-bg)] shadow-none"}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -34,6 +38,7 @@ function OpportunityCard({ card, rank }: { card: CatalogueCardView; rank: number
           <span className={`grid size-12 shrink-0 place-items-center rounded-full font-display text-lg font-bold ${rank ? "bg-blue-100 text-blue-600" : "bg-[var(--neutral-bg)] text-ink-500 ring-1 ring-[var(--neutral-line)]"}`} aria-label={rank ? `Rank ${rank}` : "Not ranked"}>{rank ?? "-"}</span>
           <div>
             <h4 className={card.eligible ? "" : "text-ink-500"}>{card.id} · {card.name}</h4>
+            {showSupplier && <p className="mt-1 flex flex-wrap items-center gap-2 text-[15px] text-ink-500">{factoryName(factoryId)} <SupplierChip factoryId={factoryId} /></p>}
             <div className="mt-1 flex flex-wrap items-center gap-2"><KindChip kind="Actual opportunity" /><ForecastTags /></div>
           </div>
         </div>
@@ -79,16 +84,18 @@ function OpportunityCard({ card, rank }: { card: CatalogueCardView; rank: number
           </tbody>
         </table>
       </details>
+
+      <OpportunityFunding opportunity={opp} />
     </li>
   );
 }
 
 // V2 11: eligibility gates first, then weighted attractiveness. A failed gate is never cancelled by a high score,
 // so an ineligible opportunity is listed after every eligible one and greyed with the failed gate named.
-export default function CatalogueTab() {
+export default function CatalogueTab({ factoryIds, clearHref, showSupplier }: ProjectsView) {
   const scope = useScope();
   const [kind, setKind] = useState<KindFilter>("all");
-  const ranked = rankOpportunities(inScope(scope, opportunities));
+  const ranked = rankOpportunities(inScope(scope, opportunities).filter((o) => factoryIds.includes(o.factoryId)));
   let eligibleRank = 0;
   const cards = ranked.map((r) => ({ card: catalogueCard(r), rank: r.eligible ? ++eligibleRank : null }));
   const library = catalogueItems.filter((c) => kind === "all" || c.kind === kind);
@@ -121,7 +128,9 @@ export default function CatalogueTab() {
       {showOpps && (
         <section aria-labelledby="cat-opps">
           <h3 id="cat-opps" className="mb-3 flex items-center gap-2"><Target className="size-5 text-blue-600" aria-hidden="true" /> Actual opportunities, best first</h3>
-          <ul className="space-y-4">{cards.map(({ card, rank }) => <OpportunityCard key={card.id} card={card} rank={rank} />)}</ul>
+          {cards.length === 0 && clearHref
+            ? <EmptyState title="No opportunities" text="There are no catalogued opportunities for the supplier you chose." action={{ label: "Clear filter", href: clearHref }} />
+            : <ul className="space-y-4">{cards.map(({ card, rank }) => <OpportunityCard key={card.id} card={card} rank={rank} showSupplier={showSupplier} />)}</ul>}
         </section>
       )}
 

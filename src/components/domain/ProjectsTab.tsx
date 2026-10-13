@@ -9,6 +9,8 @@ import { fmtClaim, claimNote } from "@/src/lib/measure";
 import type { Site } from "@/src/lib/selectors";
 import { traceProject } from "@/src/lib/trace";
 import { summaryStatus } from "@/src/lib/states";
+import { validationBy } from "@/src/lib/roleFlow";
+import { tenantFor } from "@/src/lib/roles";
 import { EmptyState, ProjectStatusPill, StateStrip, StatusPill } from "@/src/components/ui";
 import ProjectDrawerButton from "./ProjectDrawer";
 import { InfoButton } from "./Trace";
@@ -73,10 +75,13 @@ function ProjectCard({ project: p, siteName, canValidate }: { project: ProjectRe
             <Link href={`/copilot?agent=validation&claim=${p.id}`} className="btn btn-primary">
               <Sparkles className="size-4" aria-hidden="true" /> Validate with agent
             </Link>
-          ) : uploaded ? (
-            <StatusPill tone="positive" shape="circle" label="Evidence uploaded, awaiting review" />
           ) : (
-            <button type="button" onClick={() => setUploaded(true)} className="btn btn-secondary"><Upload className="size-4" aria-hidden="true" /> Upload evidence</button>
+            <span className="flex flex-col items-start gap-1">
+              {uploaded
+                ? <StatusPill tone="positive" shape="circle" label="Evidence uploaded, awaiting review" />
+                : <button type="button" onClick={() => setUploaded(true)} className="btn btn-secondary"><Upload className="size-4" aria-hidden="true" /> Upload evidence</button>}
+              <span className="text-sm text-ink-500">{validationBy(tenantFor("brand").name)}</span>
+            </span>
           )}
           <span className="sr-only" role="status">{uploaded && !canValidate ? "Evidence uploaded" : ""}</span>
         </div>

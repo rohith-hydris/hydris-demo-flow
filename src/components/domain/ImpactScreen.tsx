@@ -11,6 +11,7 @@ import { PILLAR_NAMES } from "@/src/lib/pwi";
 import { getSites } from "@/src/lib/selectors";
 import { AppMain, DataTable, PageHeader, SelectControl, Toolbar, type Column } from "@/src/components/ui";
 import { PillarBars, StateLegend, ValueStatePill } from "./ImpactPanels";
+import { StagePill } from "./ProjectsParts";
 import { useTrace } from "./Trace";
 
 const COLLAPSED = 20;
@@ -33,6 +34,8 @@ function OutcomesTable({ rows }: { rows: OutcomeRow[] }) {
     { key: "pillar", header: "Pillar", className: "min-w-32", cell: (r) => `${PILLAR_NAMES[r.pillar]} ${r.pillar}` },
     { key: "value", header: "Value", className: "min-w-56 py-2 font-semibold text-ink-900", cell: (r) => r.value },
     { key: "state", header: "State", className: "min-w-44", cell: (r) => (<div className="flex flex-col items-start gap-1 py-2"><ValueStatePill state={r.state} />{r.stateNote && <span className="text-sm text-ink-500">{r.stateNote}</span>}</div>) },
+    { key: "stage", header: "Stage", className: "min-w-36", cell: (r) => <StagePill stage={r.stage} /> },
+    { key: "fundedBy", header: "Funded by", className: "min-w-56 py-2 text-ink-700", cell: (r) => r.fundedBy },
     { key: "project", header: "Project", className: "min-w-28 text-ink-700", cell: (r) => r.project ?? "None" },
     { key: "method", header: "Method", className: "min-w-48 py-2 text-ink-700", cell: (r) => r.method },
     { key: "period", header: "Period", className: "min-w-48 py-2 text-ink-700", cell: (r) => r.period },
@@ -40,7 +43,7 @@ function OutcomesTable({ rows }: { rows: OutcomeRow[] }) {
   ];
   return (
     <>
-      <DataTable columns={columns} rows={shown} rowKey={(r) => r.id} caption="Outcomes with value, state, project, method, period and evidence" minWidth="1400px" />
+      <DataTable columns={columns} rows={shown} rowKey={(r) => r.id} caption="Outcomes with value, state, stage, funding, project, method, period and evidence" minWidth="1700px" />
       {rows.length > COLLAPSED && (
         <div className="mt-3 flex justify-center">
           <button type="button" className="btn btn-secondary" onClick={() => setAll((a) => !a)} aria-expanded={all}>{all ? "Show fewer" : `Show all ${rows.length} outcomes`}</button>
@@ -64,8 +67,8 @@ export default function ImpactScreen() {
   const factoryId = inSupplier.some((s) => s.id === factoryParam) ? factoryParam : null;
   const sites = useMemo(() => inSupplier.filter((s) => !factoryId || s.id === factoryId), [inSupplier, factoryId]);
 
-  const { approved } = useProjects();
-  const impact = useMemo(() => buildImpact(sites, approved), [sites, approved]);
+  const { approved, commitments } = useProjects();
+  const impact = useMemo(() => buildImpact(sites, approved, commitments), [sites, approved, commitments]);
   const scopeLabel = factoryId ? sites[0].name : supplierId ? suppliers.find((s) => s.id === supplierId)!.name : role === "brand" ? "All suppliers" : "Your factories";
 
   return (
@@ -131,6 +134,7 @@ export default function ImpactScreen() {
           </div>
           <OutcomesTable key={`${supplierId}-${factoryId}`} rows={impact.outcomes} />
         </section>
+
       </AppMain>
     </>
   );

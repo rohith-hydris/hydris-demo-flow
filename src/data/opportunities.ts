@@ -76,7 +76,17 @@ export interface Opportunity {
   /** Lite finding this opportunity came from, if any. */
   sourceFindingId?: string;
   measurementNeeds: string;
+  /** Who is expected to pay. Shares are 0 to 1. Missing means "To be agreed". Never creates claim entitlement (PRD V2 A05). */
+  funding?: Funding;
 }
+
+export type Funder = "Supplier" | "Brand" | "Shared" | "To be agreed";
+export interface Funding { funder: Funder; supplierShare: number | null; brandShare: number | null }
+
+// Funding: illustrative, demo only. On-site savings-backed measures are supplier-funded; basin projects are shared.
+const SUPPLIER_FUNDED: Funding = { funder: "Supplier", supplierShare: 1, brandShare: 0 };
+const SHARED_HALF: Funding = { funder: "Shared", supplierShare: 0.5, brandShare: 0.5 };
+const TO_BE_AGREED: Funding = { funder: "To be agreed", supplierShare: null, brandShare: null };
 
 const ALL_PASS: Gates = {
   insidePolygon: "Pass", hydrologicallyConnected: "Pass", collectiveAction: "Pass",
@@ -86,30 +96,30 @@ const ALL_PASS: Gates = {
 export const opportunities: Opportunity[] = [
   { id: "OPP-A", factoryId: "F12", name: "Wetland phase 2, Pallikaranai buffer", type: "Nature-based", pillar: "P3", dimension: "Availability",
     forecast: { unit: "m3", value: 8000 }, uncertainty: 0.3, capexLakh: 95, omLakh: 5, savingsLakh: 0, timingMonths: 14, scores: [4, 3, 2, 3, 5], gates: ALL_PASS,
-    measurementNeeds: "Annual satellite inundation and depth survey" },
+    funding: SHARED_HALF, measurementNeeds: "Annual satellite inundation and depth survey" },
   { id: "OPP-B", factoryId: "F12", name: "Constructed wetland polishing, Adyar tributary", type: "Effluent treatment", pillar: "P3", dimension: "Quality",
     forecast: { unit: "kg", tss: 1800, tn: 260, tp: 45 }, uncertainty: 0.3, capexLakh: 70, omLakh: 4, savingsLakh: 0, timingMonths: 9, scores: [4, 3, 3, 5, 3], gates: ALL_PASS,
-    measurementNeeds: "Matched inlet and outlet flows with weekly lab results" },
+    funding: SHARED_HALF, measurementNeeds: "Matched inlet and outlet flows with weekly lab results" },
   { id: "OPP-C", factoryId: "F12", name: "Community WASH extension, Adyar riverside", type: "Community / access", pillar: "P3", dimension: "Accessibility",
     forecast: { unit: "people", value: 600 }, uncertainty: 0.15, capexLakh: 40, omLakh: 2, savingsLakh: 0, timingMonths: 8, scores: [3, 4, 4, 4, 5], gates: ALL_PASS,
-    measurementNeeds: "Quarterly functionality check and beneficiary list" },
+    funding: SHARED_HALF, measurementNeeds: "Quarterly functionality check and beneficiary list" },
   { id: "OPP-D", factoryId: "F12", name: "Rinse-water reuse", type: "Reuse / efficiency", pillar: "P1", dimension: "Availability",
     forecast: { unit: "m3", value: 6000 }, uncertainty: 0.15, capexLakh: 55, omLakh: 2, savingsLakh: 9, timingMonths: 6, scores: [3, 5, 5, 5, 1], gates: ALL_PASS,
-    overlap: { with: "OPP-E", m3: 2500 }, sourceFindingId: "LITE-0187", measurementNeeds: "Reuse meter on the rinse line" },
+    overlap: { with: "OPP-E", m3: 2500 }, sourceFindingId: "LITE-0187", funding: SUPPLIER_FUNDED, measurementNeeds: "Reuse meter on the rinse line" },
   { id: "OPP-E", factoryId: "F12", name: "Blowdown recovery", type: "Reuse / efficiency", pillar: "P1", dimension: "Availability",
     forecast: { unit: "m3", value: 4000 }, uncertainty: 0.15, capexLakh: 30, omLakh: 1.5, savingsLakh: 6, timingMonths: 5, scores: [2, 5, 5, 5, 1], gates: ALL_PASS,
-    overlap: { with: "OPP-D", m3: 2500 }, sourceFindingId: "LITE-0188", measurementNeeds: "Blowdown recovery meter" },
+    overlap: { with: "OPP-D", m3: 2500 }, sourceFindingId: "LITE-0188", funding: SUPPLIER_FUNDED, measurementNeeds: "Blowdown recovery meter" },
   { id: "OPP-F", factoryId: "F12", name: "Sub-basin recharge expansion", type: "Nature-based", pillar: "P2", dimension: "Availability",
     forecast: { unit: "m3", value: 5000 }, uncertainty: 0.3, capexLakh: 28, omLakh: 1, savingsLakh: 0, timingMonths: 7, scores: [3, 4, 4, 3, 3], gates: ALL_PASS,
-    measurementNeeds: "Quarterly pit inspection and rainfall log" },
+    funding: TO_BE_AGREED, measurementNeeds: "Quarterly pit inspection and rainfall log" },
   { id: "OPP-H", factoryId: "F12", name: "ETP nitrogen upgrade", type: "Effluent treatment", pillar: "P1", dimension: "Quality",
     forecast: { unit: "removal", tss: 0, tn: 10, tp: 0 }, uncertainty: 0.3, capexLakh: 60, omLakh: 3.5, savingsLakh: 0, timingMonths: 9, scores: [3, 3, 4, 5, 2], gates: ALL_PASS,
-    measurementNeeds: "Weekly outlet TN lab results with the matched ETP flow log" },
+    funding: SUPPLIER_FUNDED, measurementNeeds: "Weekly outlet TN lab results with the matched ETP flow log" },
   // V2 Section 11: scores well, but fails a mandatory gate, so it is listed after every eligible opportunity.
   { id: "OPP-G", factoryId: "F04", name: "Cauvery bank planting", type: "Nature-based", pillar: "P3", dimension: "Availability",
     forecast: { unit: "m3", value: 9000 }, uncertainty: 0.3, capexLakh: 22, omLakh: 1, savingsLakh: 0, timingMonths: 10, scores: [5, 4, 4, 4, 5],
     gates: { ...ALL_PASS, hydrologicallyConnected: "Fail", collectiveAction: "Unknown" },
-    measurementNeeds: "Annual satellite inundation and depth survey" },
+    funding: TO_BE_AGREED, measurementNeeds: "Annual satellite inundation and depth survey" },
 ];
 
 /** V2 11 criteria and demonstration weights (rubric adaptation pending). */

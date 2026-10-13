@@ -3,6 +3,10 @@ import { BRAND_TENANT, SUPPLIER_TENANT } from "@/src/data/tenants";
 export type Role = "brand" | "supplier";
 export const ROLES: readonly Role[] = ["brand", "supplier"];
 
+// The single source of truth for who may do what. Both roles may generate a business case and upload evidence.
+/** Validating claims and reports is brand-only; a supplier uploads evidence. */
+export const canValidateClaims = (role: Role) => role === "brand";
+
 export const parseRole = (v: unknown): Role | null => (v === "brand" || v === "supplier" ? v : null);
 
 export interface NavItem {
@@ -13,13 +17,16 @@ export interface NavItem {
   sparkle?: boolean;
 }
 
-// PRODUCT 3 and V2 15 : same items for both roles; the Portfolio item adapts its label.
+// PRODUCT 3 and V2 15: the Portfolio item adapts its label; the fourth item is Projects (supplier) or Supplier actions (brand).
 export function navItemsFor(role: Role): NavItem[] {
   return [
     { href: "/portfolio", label: role === "brand" ? "Portfolio" : "My factories", match: ["/portfolio", "/suppliers", "/factories"] },
     { href: "/ranking", label: "Ranking", match: ["/ranking"] },
     { href: "/impact", label: "Impact", match: ["/impact"] },
-    { href: "/projects", label: "Projects", match: ["/projects"] },
+    // Suppliers plan and fund projects; the brand sees what suppliers have done.
+    role === "brand"
+      ? { href: "/actions", label: "Supplier actions", match: ["/actions"] }
+      : { href: "/projects", label: "Projects", match: ["/projects"] },
     { href: "/claims", label: "Claims & Evidence", match: ["/claims"] },
     { href: "/copilot", label: "Copilot", match: ["/copilot"], sparkle: true },
   ];

@@ -59,7 +59,8 @@ const marshParticipants: Participant[] = [
   { participant: "Adyar Garments Ltd", role: "Contributor", fundingShare: 0.5, eligiblePillarRole: "P3 collective action", eligibility: "Eligible", claimAllocation: 0.5, claimState: "Eligible" },
 ];
 const checkDamParticipants: Participant[] = [
-  { participant: "Avinashi Road Dye House (F02)", role: "Host", fundingShare: 1, eligiblePillarRole: "P2 sub-basin", eligibility: "Under review", claimAllocation: 1, claimState: "Conflict", factoryId: "F02" },
+  { participant: "Avinashi Road Dye House (F02)", role: "Host", fundingShare: 0.8, eligiblePillarRole: "P2 sub-basin", eligibility: "Under review", claimAllocation: 1, claimState: "Conflict", factoryId: "F02" },
+  { participant: "Lumen Apparel Group", role: "Contributor", isBrand: true, fundingShare: 0.2, eligiblePillarRole: "n/a", eligibility: "Funder only, no claim", claimAllocation: 0, claimState: "n/a" },
   { participant: "Noyyal Exports", role: "Contributor", fundingShare: 0, eligiblePillarRole: "P2 sub-basin", eligibility: "Under review", claimAllocation: 0.4, claimState: "Conflict" },
 ];
 

@@ -32,3 +32,7 @@ export const fmtDaysAgo = (days: number) => (days === 0 ? "today" : days === 1 ?
 
 /** Cell scores show two decimals, or three where the score has more than two (0.955, 0.907) as the PRD does. */
 export const fmtCellScore = (x: number) => (round(x, 2) === round(x, 6) ? round(x, 2).toFixed(2) : round(x, 3).toFixed(3));
+
+/** "10 Oct 2026" from an ISO date. UTC, so the server and the browser agree. */
+export const fmtIsoDate = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });

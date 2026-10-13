@@ -2,7 +2,9 @@ import { CheckCircle2, Circle, CircleDashed, XCircle, HelpCircle } from "lucide-
 import { GATE_LABELS, type Gates } from "@/src/data/opportunities";
 import { LINEAGE_STEPS } from "@/src/lib/catalogue";
 import { DEMO_ESTIMATE_TAG, type LineageState } from "@/src/lib/projectsView";
-import { StatusPill } from "@/src/components/ui";
+import { StatusPill, type ShapeKind, type Tone } from "@/src/components/ui";
+import type { CommitmentStatus, FactoryId, InitiativeStage } from "@/src/lib/types";
+import { supplierNameOfFactory } from "@/src/lib/selectors";
 import { ValueStatePill } from "./ImpactPanels";
 
 /** Every forecast figure carries both tags: it is a Forecast, and it is a demo estimate (V2 0 and 12). */
@@ -53,3 +55,28 @@ export function GateList({ gates }: { gates: Gates }) {
     </ul>
   );
 }
+
+const STAGE_META: Record<InitiativeStage, { tone: Tone; shape: ShapeKind }> = {
+  Validated: { tone: "positive", shape: "circle" },
+  Claimed: { tone: "info", shape: "square" },
+  Planned: { tone: "internal", shape: "diamond" },
+  Proposed: { tone: "neutral", shape: "ring" },
+  "Under review": { tone: "caution", shape: "triangle" },
+  "Measured on site": { tone: "info", shape: "diamond" },
+  "Not counted": { tone: "neutral", shape: "dash" },
+};
+/** Initiative stage, drawn with a shape as well as a word. */
+export const StagePill = ({ stage }: { stage: InitiativeStage }) => <StatusPill {...STAGE_META[stage]} label={stage} />;
+
+const COMMITMENT_META: Record<CommitmentStatus, { tone: Tone; shape: ShapeKind }> = {
+  "Not committed": { tone: "neutral", shape: "ring" },
+  "Partly committed": { tone: "caution", shape: "diamond" },
+  Committed: { tone: "positive", shape: "circle" },
+};
+export const CommitmentPill = ({ status }: { status: CommitmentStatus }) => <StatusPill {...COMMITMENT_META[status]} label={status} />;
+
+/** The factories in view on Projects, from the brand's supplier filter. `clearHref` is set while a filter is on. */
+export interface ProjectsView { factoryIds: FactoryId[]; clearHref: string | null; showSupplier: boolean }
+
+/** The supplier a factory belongs to, shown to the brand when more than one supplier is in view. */
+export const SupplierChip = ({ factoryId }: { factoryId: FactoryId }) => <StatusPill tone="neutral" shape="square" label={supplierNameOfFactory(factoryId)} />;

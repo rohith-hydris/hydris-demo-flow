@@ -9,12 +9,12 @@ import { fmtPct1 } from "@/src/lib/format";
 import { compareRows, fmtOutcome, fmtLakh } from "@/src/lib/projectsView";
 import { reuseInsight, paybackLabel } from "@/src/lib/scenarios";
 import { EmptyState, StatusPill } from "@/src/components/ui";
-import { ForecastTags } from "./ProjectsParts";
+import { ForecastTags, SupplierChip, type ProjectsView } from "./ProjectsParts";
 import { DeliveryStrip, ResultNotes, ScenarioActions, SCENARIO_FACTORY, useScenarioModel } from "./ScenarioParts";
 
 const NO_PROJECT_ID = "S0";
 
-function Builder() {
+function Builder({ showSupplier }: { showSupplier: boolean }) {
   const { site, evaluate, baseline } = useScenarioModel();
   const { scenarios, saveScenario } = useProjects();
   const nameId = useId();
@@ -34,7 +34,7 @@ function Builder() {
   return (
     <section className="card p-6" aria-labelledby="builder-h">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id="builder-h">Build a scenario for {site.name}</h3>
+        <h3 id="builder-h" className="flex flex-wrap items-center gap-2">Build a scenario for {site.name}{showSupplier && <SupplierChip factoryId={site.id} />}</h3>
         <ForecastTags />
       </div>
       <p className="mt-1 text-ink-500">Tick opportunities and the results update. Targets stay frozen at baseline, and a Forecast is never mixed into Measured or Validated totals.</p>
@@ -120,7 +120,15 @@ function CompareTable({ ids }: { ids: string[] }) {
 }
 
 // V2 12: build, save and compare up to three scenarios against the no-project baseline, then business case and approval.
-export default function ScenariosTab() {
+// The demo's scenarios are for F12 only, so a supplier filter without F12 leaves nothing to show.
+export default function ScenariosTab({ factoryIds, clearHref, showSupplier }: ProjectsView) {
+  if (!factoryIds.includes(SCENARIO_FACTORY)) {
+    return <EmptyState title="No scenarios" text="The demo's scenarios are for Ambattur Denim Unit, which is not in the supplier you chose." action={clearHref ? { label: "Clear filter", href: clearHref } : undefined} />;
+  }
+  return <Scenarios showSupplier={showSupplier} />;
+}
+
+function Scenarios({ showSupplier }: { showSupplier: boolean }) {
   const { scenarios, approved } = useProjects();
   const { evaluate } = useScenarioModel();
   const saved = scenarios.filter((s) => s.id !== NO_PROJECT_ID);
@@ -134,7 +142,7 @@ export default function ScenariosTab() {
 
   return (
     <div className="space-y-8">
-      <Builder />
+      <Builder showSupplier={showSupplier} />
 
       <section aria-labelledby="saved-h">
         <h3 id="saved-h" className="mb-1">Saved scenarios</h3>

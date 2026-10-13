@@ -11,14 +11,15 @@ import { inScope } from "@/src/lib/scope";
 import { lineageStates } from "@/src/lib/projectsView";
 import { getSites } from "@/src/lib/selectors";
 import { CitationChip, EmptyState, StatusPill } from "@/src/components/ui";
-import { LineageStrip } from "./ProjectsParts";
+import OpportunityFunding from "./OpportunityFunding";
+import { LineageStrip, SupplierChip, type ProjectsView } from "./ProjectsParts";
 
 // V2 10: Hydris Lite findings and a one-click import. Importing is idempotent on source assessment + finding + factory.
-export default function OpportunitiesTab() {
+export default function OpportunitiesTab({ factoryIds, clearHref, showSupplier }: ProjectsView) {
   const scope = useScope();
   const { imports, importLite } = useProjects();
   const names = Object.fromEntries(getSites(scope).map((s) => [s.id, s.name]));
-  const findings = inScope(scope, liteFindings);
+  const findings = inScope(scope, liteFindings).filter((f) => factoryIds.includes(f.factoryId));
   const [selected, setSelected] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; created: boolean } | null>(null);
 
@@ -28,7 +29,11 @@ export default function OpportunitiesTab() {
     setSelected(f.id);
   }
 
-  if (findings.length === 0) return <EmptyState title="No Lite findings" text="Hydris Lite has no findings for the factories you can see." />;
+  if (findings.length === 0) {
+    return clearHref
+      ? <EmptyState title="No Lite findings" text="Hydris Lite has no findings for the supplier you chose." action={{ label: "Clear filter", href: clearHref }} />
+      : <EmptyState title="No Lite findings" text="Hydris Lite has no findings for the factories you can see." />;
+  }
   const detail = findings.find((f) => f.id === selected) ?? null;
 
   return (
@@ -50,7 +55,7 @@ export default function OpportunitiesTab() {
             <li key={f.id} className={`card p-5 ${selected === f.id ? "ring-2 ring-blue-500" : ""}`}>
               <div className="grid items-center gap-x-5 gap-y-3 lg:grid-cols-[minmax(0,2.6fr)_minmax(0,1.2fr)_auto]">
                 <div>
-                  <p className="font-semibold text-ink-900">{f.id} · {names[f.factoryId]}</p>
+                  <p className="flex flex-wrap items-center gap-2 font-semibold text-ink-900">{f.id} · {names[f.factoryId]}{showSupplier && <SupplierChip factoryId={f.factoryId} />}</p>
                   <p className="text-ink-700">{f.finding}</p>
                   <p className="mt-2">
                     {oppId
@@ -92,6 +97,7 @@ function OpportunityDetail({ finding: f, siteName }: { finding: LiteFinding; sit
         {catalogued && <Link href="/projects?tab=catalogue" className="btn btn-secondary min-h-11 px-4 text-sm">Open in Catalogue</Link>}
       </div>
       <div className="mt-4"><LineageStrip states={lineageStates(!!oppId, inScenario, inApproved)} /></div>
+      {catalogued && <OpportunityFunding opportunity={catalogued} />}
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <div className="card p-5">
           <h4 className="mb-2">Kept with the opportunity</h4>

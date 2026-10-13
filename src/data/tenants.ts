@@ -1,6 +1,9 @@
 // PRODUCT 5.1 and 5.2: tenants, reporting period and the demo "today". Illustrative data.
 export const BRAND_TENANT = { name: "Lumen Apparel Group", initials: "LA" } as const;
 
+/** Every demo factory is in Tamil Nadu. Used to match funders by region. */
+export const DEMO_REGION = "Tamil Nadu";
+
 export const DEMO_SUPPLIER_ID = "SUP5";
 export const SUPPLIER_TENANT = { name: "Coromandel Denim Mills", initials: "CD" } as const;
 

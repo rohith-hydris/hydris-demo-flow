@@ -52,3 +52,13 @@ export type RiskGap = "No data" | "Error";
 
 export type CheckOutcome = "Pass" | "Fail" | "Unknown";
 export type ParticipantRole = "Host" | "Implementing partner" | "Contributor";
+
+/** Why a funder did not match an opportunity (src/lib/funders.ts). */
+export type Blocker = "project-type" | "region" | "supplier-size" | "minimum-ticket";
+/** Where a supplier initiative stands, for the brand's Initiatives view and the Outcomes table (src/lib/initiatives.ts). */
+export type InitiativeStage = "Proposed" | "Planned" | "Claimed" | "Validated" | "Under review" | "Not counted" | "Measured on site";
+/** Whether every party expected to pay for an opportunity has recorded a commitment (src/lib/funding.ts). */
+export type CommitmentStatus = "Not committed" | "Partly committed" | "Committed";
+/** Where an action happens: inside the factory (P1), or outside it in the sub-basin (P2) or the basin (P3). */
+export type Where = "Inside the factory" | "Outside: sub-basin" | "Outside: basin";
+export type InitiativeKind = "Project" | "Opportunity" | "Site measurement";

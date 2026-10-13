@@ -32,7 +32,7 @@ const parameterColumns: Column<ParameterRow>[] = [
 ];
 
 function ParametersTab() {
-  const rows = useMemo(parameterRows, []);
+  const rows = useMemo(() => parameterRows(), []);
   return (
     <>
       <p className="mb-4 max-w-3xl text-ink-700">
@@ -125,7 +125,7 @@ const decisionColumns: Column<DecisionRow>[] = [
   { key: "decision", header: "Decision", className: "min-w-80 py-2 text-ink-700", cell: (r) => r.decision },
   { key: "appearsIn", header: "Where it shows in the app", className: "min-w-52 py-2 text-ink-700", cell: (r) => r.appearsIn },
   { key: "owner", header: "Owner", className: "min-w-32 text-ink-500", cell: (r) => r.owner },
-  { key: "status", header: "Status", className: "min-w-48", cell: (r) => (r.status === "Open" ? <StatusPill tone="neutral" shape="ring" label="Open" /> : <ProposedBadge />) },
+  { key: "status", header: "Status", className: "min-w-48", cell: (r) => (r.status === "Open" ? <StatusPill tone="neutral" shape="ring" label="Open" /> : r.status === "Decision pending" ? <StatusPill tone="caution" shape="diamond" label="Decision pending" /> : <ProposedBadge />) },
 ];
 
 function DecisionsTab() {

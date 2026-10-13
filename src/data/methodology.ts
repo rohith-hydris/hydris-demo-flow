@@ -153,7 +153,7 @@ export interface DecisionRow {
   appearsIn: string;
   /** Placeholder until the team names an owner. */
   owner: string;
-  status: "Open" | "Proposed, under review";
+  status: "Open" | "Proposed, under review" | "Decision pending";
 }
 
 const OWNER = "To be assigned";
@@ -171,6 +171,11 @@ export const openDecisions: DecisionRow[] = [
   { id: "V2-UW", decision: "Whether untreated connected wastewater (ucw) is always Watch, whatever its score (PRODUCT 5.6), or uses the same thresholds as the other risks: Present at 3.0 and above, Watch from 2.0. The PRD team has not confirmed the constant rule. The demo uses the thresholds (UCW_ALWAYS_WATCH = false in src/lib/risk.ts). Every demo site scores 2.5, so no status changes today.", appearsIn: "Risk tab, untreated connected wastewater card", owner: OWNER, status: "Proposed, under review" },
   { id: "V2-HS", decision: "How plant health (0 to 100) is calculated. The PRD gives the bands but no formula. The demo uses 0.60 outlet compliance + 0.25 monitoring uptime + 0.15 data freshness (30-day window).", appearsIn: "Plant health on Overview and the factory card, alert severity", owner: OWNER, status: "Proposed, under review" },
   { id: "V2-SC", decision: "How the 52 self-assessment answers combine into site confidence. The PRD gives the 0 to 3 score, the evidence confidences (1.0, 0.7, 0.5) and the 0.10 penalty per failed check XV-01 to XV-10, but not the combination. The demo uses the mean of (score / 3 x evidence confidence).", appearsIn: "Site confidence on Overview and Impact, status band", owner: OWNER, status: "Proposed, under review" },
-  { id: "V2-SA", decision: "Whether a supplier may approve a scenario as the delivery baseline. The demo reserves approval for the brand.", appearsIn: "Projects, Scenarios", owner: OWNER, status: "Proposed, under review" },
+  { id: "V2-SA", decision: "Whether a supplier may approve a scenario as the delivery baseline. Superseded for the demo by V2-APPROVE (default: supplier).", appearsIn: "Projects, Scenarios", owner: OWNER, status: "Proposed, under review" },
   { id: "V2-CC", decision: "Which entries count toward claims: Validated only, or Measured as well.", appearsIn: "Impact and Claims and Evidence", owner: OWNER, status: "Proposed, under review" },
+  { id: "V2-FUND", decision: "Who may fund an opportunity (supplier, brand, shared or a third party), and how funding and commitments are recorded before a project exists. The demo seeds illustrative shares and keeps commitments for the session only. Also open: how the brand's share of an outside project is recorded before and after a project exists, and whether it appears in the project's participant list.", appearsIn: "Projects, Opportunities and Catalogue cards; business case Funding needs; Supplier actions", owner: OWNER, status: "Decision pending" },
+  { id: "V2-BRANDSHARE", decision: "How one supplier's benefit is divided between several brand customers so the same water is not claimed twice. The demo shows the benefit once and does not split it between brands.", appearsIn: "Supplier actions, Impact Outcomes", owner: OWNER, status: "Decision pending" },
+  { id: "V2-APPROVE", decision: "Who approves the delivery baseline: the supplier, the brand, or whoever funds it. The demo default is the supplier, set by BASELINE_APPROVER in src/lib/baseline.ts.", appearsIn: "Projects, Scenarios; Supplier actions, Delivery plan", owner: OWNER, status: "Decision pending" },
+  { id: "V2-GRANT", decision: "Whether grant or subsidy funding affects additionality and who may claim the benefit. The demo shows the question on each grant and does not change any claim.", appearsIn: "Projects, Possible funders", owner: OWNER, status: "Decision pending" },
+  { id: "V2-FUNDERS", decision: "Where real funder data comes from, who keeps it current, and how the \"last checked\" date is shown. The demo funders are illustrative placeholders, not real offers.", appearsIn: "Projects, Possible funders", owner: OWNER, status: "Decision pending" },
 ];

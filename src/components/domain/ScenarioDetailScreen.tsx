@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useRole } from "@/src/context/RoleContext";
 import { useProjects } from "@/src/context/ProjectsContext";
 import { fmtPct1 } from "@/src/lib/format";
 import { compareRows } from "@/src/lib/projectsView";
@@ -9,11 +12,17 @@ import { DeliveryStrip, ResultNotes, ScenarioActions, useScenarioModel } from ".
 
 // /projects/scenarios/:id (V2 15): one scenario, its results against the no-project baseline, business case and approval.
 export default function ScenarioDetailScreen({ scenarioId }: { scenarioId: string }) {
+  const { role } = useRole();
+  const router = useRouter();
   const { scenarios, approved } = useProjects();
   const { site, evaluate, baseline } = useScenarioModel();
+  useEffect(() => {
+    if (role === "brand") router.replace("/actions");
+  }, [role, router]);
   const scenario = scenarios.find((s) => s.id === scenarioId);
   const crumbs = [{ label: "Projects", href: "/projects?tab=scenarios" }, { label: scenario ? `${scenario.id} ${scenario.name}` : "Scenario" }];
 
+  if (role === "brand") return null;
   if (!scenario) {
     return (
       <>

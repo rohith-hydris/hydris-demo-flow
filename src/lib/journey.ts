@@ -1,5 +1,7 @@
 // V2 Section 16: the connected demo journey, as links only. A navigation aid, not a wizard: every step is a page that already exists.
 
+import type { Role } from "./roles";
+
 export interface JourneyStep { id: string; label: string; href: string }
 
 export const JOURNEY_FACTORY = "F12";
@@ -15,5 +17,16 @@ export const JOURNEY_STEPS: JourneyStep[] = [
   { id: "reporting", label: "Reporting", href: `/copilot?agent=evidence&task=brsr-p6&factory=${JOURNEY_FACTORY}` },
 ];
 
+/** The brand does not plan projects: it reviews what suppliers have done on Supplier actions, then validates and reports. */
+const BRAND_STEPS: JourneyStep[] = [
+  JOURNEY_STEPS[0],
+  { id: "actions", label: "Supplier actions", href: "/actions" },
+  ...JOURNEY_STEPS.slice(5),
+];
+
+export const journeyStepsFor = (role: Role): JourneyStep[] => (role === "brand" ? BRAND_STEPS : JOURNEY_STEPS);
+
 /** The step a Projects tab belongs to, so the strip can mark where you are. */
-export const STEP_FOR_PROJECTS_TAB: Record<string, string> = { opportunities: "assessment", catalogue: "opportunity", scenarios: "comparison" };
+export const STEP_FOR_PROJECTS_TAB: Record<string, string | undefined> = {
+  opportunities: "assessment", catalogue: "opportunity", scenarios: "comparison",
+};

@@ -18,7 +18,14 @@ import {
   DEFAULT_WEIGHTS, bwsRise, evaluateRisks, recordGaps, renormalisationDelta, rankPresentCount, riskCounts, riskPillarsPolicy, siteRiskFlags, topDrivers, type SiteRiskFlags,
   type Pillars, type RiskCoverage, type RiskCounts, type RiskResult, type Weights,
 } from "./risk";
-import { canSeeFactory, type Scope } from "./scope";
+import { canSeeFactory, factoryIdsInView, type Scope } from "./scope";
+import { rolePageHeading } from "./roleFlow";
+import { tenantFor, type Role } from "./roles";
+import { opportunities } from "@/src/data/opportunities";
+import { supplierInitiatives, type InitiativeRow } from "./initiatives";
+import { funders as allFunders } from "@/src/data/funders";
+import type { Commitments } from "./funding";
+import type { Shortlist } from "./funders";
 import type { Band, FactoryId, Health, PillarKey, Quadrant, Severity, SupplierId, Tier, TierDirection, ZdhcTier } from "./types";
 
 // The only place the data in src/data/ is joined to the formulas. Components read from here, never from src/data/.
@@ -194,3 +201,43 @@ export function getPortfolio(scope: Scope, weights: Weights = DEFAULT_WEIGHTS): 
     offTrackCount: sites.filter((s) => s.offTrack).length,
   };
 }
+
+// ---- Supplier actions (brand), funding, funders and baseline approval -------------------------------------------------------
+
+export const getProject = (id: string) => projects.find((p) => p.id === id);
+export const factoryName = (id: FactoryId) => factories.find((f) => f.id === id)?.name ?? id;
+
+/** Projects and gate-passing opportunities for the factories in scope, with stage and funding. */
+export const getSupplierInitiatives = (scope: Scope, approvedItems: readonly string[], commitments: Commitments, shortlist: Shortlist): InitiativeRow[] =>
+  supplierInitiatives(scope, approvedItems, commitments, shortlist, { sites: getSites(scope) });
+
+export { gatesPass } from "./catalogue";
+export { initiativeCounts, initiativeCountLine, INITIATIVE_STAGES, WHERE_ORDER, whereCountLine, whereOf, brandFundingCell, brandAmountText, outsideBrandSummary } from "./initiatives";
+export { fundingLabel, fundingOf, commitmentStatus, canCommitReason } from "./funding";
+export { possibleFunders, coverage, claimNote, blockerText, PLACEHOLDER_NOTE } from "./funders";
+export { BASELINE_APPROVER, canApproveBaseline, approverLabel } from "./baseline";
+export const opportunityName = (id: string) => opportunities.find((o) => o.id === id)?.name ?? id;
+export const funderNames = (ids: readonly string[]) => ids.map((id) => allFunders.find((f) => f.id === id)?.name ?? id);
+
+// ---- Projects page heading and the supplier filter -------------------------------------------------
+
+const brandName = () => tenantFor("brand").name;
+
+/** Breadcrumb root, scope line and whether to show the supplier filter. Counts come from the scope. */
+export const projectsHeading = (role: Role, scope: Scope) =>
+  rolePageHeading(role, {
+    brandName: brandName(), supplierName: suppliers.find((s) => s.id === scope.supplierIds[0])?.name ?? "",
+    supplierCount: scope.supplierIds.length, factoryCount: scope.factoryIds.length,
+  });
+
+/** "All suppliers" plus each supplier in scope with its factory count, for the Projects supplier filter. */
+export const supplierFilterOptions = (scope: Scope) => [
+  { value: "all", label: "All suppliers" },
+  ...suppliers.filter((s) => scope.supplierIds.includes(s.id)).map((s) => {
+    const n = s.factoryIds.filter((id) => canSeeFactory(scope, id)).length;
+    return { value: s.id, label: `${s.name} (${n === 1 ? "1 factory" : `${n} factories`})` };
+  }),
+];
+
+export { factoryIdsInView };
+export const supplierNameOfFactory = (id: FactoryId) => STATIC.find((s) => s.record.id === id)?.supplierName ?? "";

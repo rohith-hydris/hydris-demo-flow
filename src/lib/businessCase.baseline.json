@@ -1,0 +1,120 @@
+{
+ "title": "Business case: Basin first",
+ "note": "Draft for review. Demo estimates.",
+ "sections": [
+  {
+   "heading": "Scope",
+   "lines": [
+    "Ambattur Denim Unit. Scenario S1, Basin first.",
+    "OPP-A Wetland phase 2, Pallikaranai buffer: +8,000 m³/yr (±30%)",
+    "OPP-B Constructed wetland polishing, Adyar tributary: TSS 1,800, TN 260, TP 45 kg/yr (±30%)",
+    "OPP-C Community WASH extension, Adyar riverside: +600 people (±15%)"
+   ],
+   "cites": [
+    "OPP-A",
+    "OPP-B",
+    "OPP-C"
+   ]
+  },
+  {
+   "heading": "Alternatives compared",
+   "lines": [
+    "No-project baseline: PWI 69.8%, volumetric balance 73.6%.",
+    "S2 Efficiency and reuse: PWI 70.4%, volumetric balance 80.5%, payback 11.0 years.",
+    "S3 Balanced: PWI 77.8%, volumetric balance 90.9%, payback No financial payback."
+   ],
+   "cites": [
+    "Scenario comparison",
+    "S2",
+    "S3"
+   ]
+  },
+  {
+   "heading": "Funding needs",
+   "lines": [
+    "Capex ₹205 lakh over 14 months."
+   ],
+   "cites": [
+    "Opportunity capex"
+   ]
+  },
+  {
+   "heading": "Operating and monitoring costs",
+   "lines": [
+    "₹11 lakh a year. Net savings -₹11 lakh a year after operating costs."
+   ],
+   "cites": [
+    "Opportunity O&M"
+   ]
+  },
+  {
+   "heading": "Assumptions",
+   "lines": [
+    "Water saved is valued at ₹150/m³.",
+    "Targets stay frozen at baseline.",
+    "Forecast benefit is never added to Measured or Validated totals.",
+    "Criterion weights are demonstration weights; rubric adaptation is pending."
+   ],
+   "cites": [
+    "V2 Section 12"
+   ]
+  },
+  {
+   "heading": "Risks",
+   "lines": [
+    "OPP-A: uncertainty ±30%. Annual satellite inundation and depth survey.",
+    "OPP-B: uncertainty ±30%. Matched inlet and outlet flows with weekly lab results.",
+    "OPP-C: uncertainty ±15%. Quarterly functionality check and beneficiary list."
+   ],
+   "cites": [
+    "OPP-A",
+    "OPP-B",
+    "OPP-C"
+   ]
+  },
+  {
+   "heading": "Responsibilities",
+   "lines": [
+    "Brand approves the delivery baseline. The supplier delivers and uploads monitoring evidence."
+   ],
+   "cites": [
+    "Roles"
+   ]
+  },
+  {
+   "heading": "Timing",
+   "lines": [
+    "OPP-A: 14 months",
+    "OPP-B: 9 months",
+    "OPP-C: 8 months"
+   ],
+   "cites": [
+    "OPP-A",
+    "OPP-B",
+    "OPP-C"
+   ]
+  },
+  {
+   "heading": "Uncertainty",
+   "lines": [
+    "Site PWI 81.6% central, 78.6% low.",
+    "Volumetric balance 80.9% central, 78.7% low."
+   ],
+   "cites": [
+    "Module 03 · Impact"
+   ]
+  },
+  {
+   "heading": "Stewardship value (no financial payback)",
+   "lines": [
+    "Savings do not exceed operating costs, so this case rests on stewardship value.",
+    "Site PWI 69.8% to 81.6% (+11.8 points)",
+    "Volumetric balance 73.6% to 80.9% (+7.3 points)",
+    "People reached: 600"
+   ],
+   "cites": [
+    "Module 03 · Impact"
+   ]
+  }
+ ]
+}

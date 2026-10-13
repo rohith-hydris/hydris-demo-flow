@@ -8,7 +8,9 @@ import { displayNote, projectsFor } from "./claims";
 import { PILLARS, REMOVAL_TARGET, type PwiCell } from "./pwi";
 import type { Site } from "./selectors";
 import { GRADE_MEANING, type Trace, type TraceInput } from "./trace";
-import type { CellGrade, Dimension, FactoryId, Pillar } from "./types";
+import type { Commitments } from "./funding";
+import { opportunityFundedBy, opportunityStage, projectFundedBy, projectStage } from "./initiatives";
+import type { CellGrade, Dimension, FactoryId, InitiativeStage, Pillar } from "./types";
 
 // V2 Section 9: the Impact destination. Quantity, Quality (per pollutant) and Access stay separate and are never blended.
 // Each value carries a state: Validated, Measured or Forecast. Forecast comes only from opportunities and scenarios and
@@ -25,7 +27,7 @@ export const VALUE_STATES: readonly ValueState[] = ["Validated", "Measured", "Fo
 export const FORECAST_SCENARIO_ID = "S1";
 
 const DIMENSION_OF: Record<Dimension, ImpactDimension> = { Availability: "Quantity", Quality: "Quality", Accessibility: "Access" };
-type Amount = { m3: number; people: number; kg: Record<Pollutant, number> };
+export type Amount = { m3: number; people: number; kg: Record<Pollutant, number> };
 const zero = (): Amount => ({ m3: 0, people: 0, kg: { tss: 0, tn: 0, tp: 0 } });
 
 export interface StateSplit { Validated: number; Measured: number; Forecast: number }
@@ -37,6 +39,10 @@ export interface OutcomeRow {
   value: string; state: ValueState; stateNote: string | null;
   project: string | null; method: string; period: string; evidence: string;
   trace: Trace;
+  /** Where the initiative stands (src/lib/initiatives.ts), and who funds it. Funding never sets attribution (R3). */
+  stage: InitiativeStage; fundedBy: string;
+  /** The amount behind `value`, in the units the panels add up. */
+  amount: Amount;
 }
 
 export interface ImpactSummary {
@@ -105,14 +111,14 @@ const traceFor = (
 });
 
 /** Everything one factory contributes, as outcome rows plus the entries the panels add up. */
-function factoryOutcomes(site: Site, baseline: ApprovedBaseline): { rows: OutcomeRow[]; entries: Entry[] } {
+function factoryOutcomes(site: Site, baseline: ApprovedBaseline, commitments: Commitments): { rows: OutcomeRow[]; entries: Entry[] } {
   const rows: OutcomeRow[] = [];
   const entries: Entry[] = [];
   const add = (
-    pillar: Pillar, dimension: ImpactDimension, state: ValueState, amount: Amount, r: Omit<OutcomeRow, "id" | "factoryId" | "factoryName" | "dimension" | "pillar" | "state" | "value" | "trace"> & { value?: string; trace: Trace },
+    pillar: Pillar, dimension: ImpactDimension, state: ValueState, amount: Amount, r: Omit<OutcomeRow, "id" | "factoryId" | "factoryName" | "dimension" | "pillar" | "state" | "value" | "trace" | "amount"> & { value?: string; trace: Trace },
   ) => {
     entries.push({ factoryId: site.id, pillar, dimension, state, amount });
-    rows.push({ id: `${site.id}-${rows.length}`, factoryId: site.id, factoryName: site.name, dimension, pillar, state, value: r.value ?? fmtAmount(dimension, amount), ...r });
+    rows.push({ id: `${site.id}-${rows.length}`, factoryId: site.id, factoryName: site.name, dimension, pillar, state, value: r.value ?? fmtAmount(dimension, amount), amount, ...r });
   };
   const pwi = site.pwi;
 
@@ -125,6 +131,7 @@ function factoryOutcomes(site: Site, baseline: ApprovedBaseline): { rows: Outcom
     const label = cell.breakdown.length ? cell.breakdown.map((b) => b.label).join(", ") : dim === "Quantity" ? "On-site water measures" : "Headcount with WASH access";
     add("P1", dim, state, a, {
       outcome: label, stateNote: state === "Validated" ? "internal verification" : cell.state,
+      stage: state === "Validated" ? "Validated" : "Claimed", fundedBy: "Not recorded",
       project: null, method: "Site measurement", period: "FY2025-26", evidence: `Grade ${cell.grade}, internal verification`,
       trace: traceFor(site, `Site P1 ${cell.dimension}`, fmtAmount(dim, a), ["Delivered = cell score × target", `Score ${cell.score.toFixed(3)}`],
         [{ label: "Cell state", value: cell.state }, { label: "Period", value: "FY2025-26" }, { label: "Evidence", value: `Grade ${cell.grade}, internal verification` }, { label: "Source opportunity", value: "None recorded" }], cell.grade),
@@ -140,6 +147,7 @@ function factoryOutcomes(site: Site, baseline: ApprovedBaseline): { rows: Outcom
       };
       add("P1", "Quality", "Validated", { ...zero(), kg }, {
         outcome: "ETP removal TSS / TN / TP", stateNote: "internal verification", value: `${pct.tss}% / ${pct.tn}% / ${pct.tp}% removal`,
+        stage: "Validated", fundedBy: "Not recorded",
         project: null, method: "WQBA Treatment System", period: "FY2025-26", evidence: `Grade ${rem!.grade}, internal verification`,
         trace: traceFor(site, "Site P1 Quality", `${pct.tss}% / ${pct.tn}% / ${pct.tp}%`,
           ["Removal kg = baseline influent load × removal %", `Target ${REMOVAL_TARGET * 100}% per pollutant`],
@@ -156,7 +164,7 @@ function factoryOutcomes(site: Site, baseline: ApprovedBaseline): { rows: Outcom
     const a = scaleAmount(p.claim, p.attribution);
     const dim = DIMENSION_OF[p.dimension];
     add(p.pillar, dim, bs, a, {
-      outcome: p.name, stateNote: null, project: p.id, method: p.method, period: p.operatingPeriod,
+      outcome: p.name, stateNote: null, project: p.id, stage: projectStage(p), fundedBy: projectFundedBy(p), method: p.method, period: p.operatingPeriod,
       evidence: `Grade ${p.grade === "none" ? "none" : p.grade}, evidence ${p.states.evidenceAcceptance.toLowerCase()}`,
       trace: traceFor(site, p.name, fmtAmount(dim, a),
         ["Attributed benefit = claimed benefit × attribution share f", `${bs}: ${bs === "Measured" ? "measured but not yet validated" : "validated on an eligible claim"}`],
@@ -171,7 +179,8 @@ function factoryOutcomes(site: Site, baseline: ApprovedBaseline): { rows: Outcom
     const a = forecastAmount(o, site.id);
     const dim = DIMENSION_OF[o.dimension];
     add(o.pillar, dim, "Forecast", a, {
-      outcome: o.name, stateNote: "Demo estimate", project: null, method: o.type, period: `${o.timingMonths} months to deliver`,
+      outcome: o.name, stateNote: "Demo estimate", project: null,
+      stage: opportunityStage(o, baseline.items, commitments), fundedBy: opportunityFundedBy(o), method: o.type, period: `${o.timingMonths} months to deliver`,
       evidence: "Forecast, no delivery evidence yet",
       trace: traceFor(site, o.name, fmtAmount(dim, a),
         ["Forecast benefit from the opportunity, central value", `Uncertainty ±${Math.round(o.uncertainty * 100)}%`, "A forecast never counts as Measured or Validated."],
@@ -195,8 +204,8 @@ const targetOf = (site: Site, pillar: Pillar, dim: Dimension): Amount | null => 
 };
 
 /** `sites` are the factories in scope, already filtered by role. */
-export function buildImpact(sites: Site[], baseline: ApprovedBaseline = defaultBaseline()): ImpactSummary {
-  const all = sites.map((s) => factoryOutcomes(s, baseline));
+export function buildImpact(sites: Site[], baseline: ApprovedBaseline = defaultBaseline(), commitments: Commitments = {}): ImpactSummary {
+  const all = sites.map((s) => factoryOutcomes(s, baseline, commitments));
   const entries = all.flatMap((x) => x.entries);
 
   const row = (dim: ImpactDimension, pick: (a: Amount) => number, targetDim: Dimension): PillarRow[] =>

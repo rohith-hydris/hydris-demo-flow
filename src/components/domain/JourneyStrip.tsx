@@ -1,13 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { JOURNEY_STEPS } from "@/src/lib/journey";
+import { useRole } from "@/src/context/RoleContext";
+import { journeyStepsFor } from "@/src/lib/journey";
 
-/** Risk > Assessment > Opportunity > Project comparison > Business case > Evidence review > Impact > Reporting. Links only. */
+/** Supplier: Risk > Assessment > Opportunity > Project comparison > Business case > Evidence review > Impact > Reporting. Brand: Risk > Supplier actions > Evidence review > Impact > Reporting. Links only. */
 export default function JourneyStrip({ current }: { current?: string }) {
+  const { role } = useRole();
   return (
     <nav aria-label="Demo journey for Ambattur Denim Unit" className="rounded-tile border border-line bg-card/80 px-3 py-2">
       <ol className="flex flex-wrap items-center gap-x-1 gap-y-1">
-        {JOURNEY_STEPS.map((s, i) => (
+        {journeyStepsFor(role ?? "supplier").map((s, i) => (
           <li key={s.id} className="flex items-center gap-1">
             {i > 0 && <ChevronRight className="size-4 text-ink-500" aria-hidden="true" />}
             <Link

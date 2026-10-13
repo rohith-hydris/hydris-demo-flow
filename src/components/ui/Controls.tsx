@@ -74,12 +74,12 @@ export function SelectControl({ param, label, options, defaultValue }: { param: 
   const router = useRouter();
   const id = useId();
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex max-w-full flex-wrap items-center gap-2">
       <label htmlFor={id} className="whitespace-nowrap text-base font-semibold text-ink-500">{label}</label>
       <select
         id={id} value={params.get(param) ?? defaultValue}
         onChange={(e) => router.replace(hrefWith({ [param]: e.target.value === defaultValue ? undefined : e.target.value }), { scroll: false })}
-        className="min-h-11 rounded-full border border-line bg-card px-4 text-base"
+        className="min-h-11 min-w-0 max-w-full rounded-full border border-line bg-card px-4 text-base"
       >
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

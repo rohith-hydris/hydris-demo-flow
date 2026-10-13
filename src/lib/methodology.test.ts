@@ -56,3 +56,9 @@ describe("methodology page content", () => {
     expect(openDecisions.every((d) => d.owner === "To be assigned")).toBe(true);
   });
 });
+
+describe("Funding and approval decisions", () => {
+  it("lists V2-FUND, V2-BRANDSHARE, V2-APPROVE, V2-GRANT and V2-FUNDERS as Decision pending", () => {
+    for (const id of ["V2-FUND", "V2-BRANDSHARE", "V2-APPROVE", "V2-GRANT", "V2-FUNDERS"]) expect(openDecisions.find((d) => d.id === id)).toMatchObject({ status: "Decision pending", owner: "To be assigned" });
+  });
+});

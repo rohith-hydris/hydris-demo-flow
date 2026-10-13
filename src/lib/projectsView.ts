@@ -30,7 +30,7 @@ const lowOf = (o: Opportunity): string => {
 };
 
 /** Payback for one opportunity on its own, using the same rule as a scenario. */
-const standalonePayback = (o: Opportunity) => {
+export const standalonePayback = (o: Opportunity) => {
   const net = o.savingsLakh - o.omLakh;
   return net > 0 ? `${(o.capexLakh / net).toFixed(1)} years` : "No financial payback";
 };

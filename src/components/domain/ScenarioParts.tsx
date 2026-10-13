@@ -8,6 +8,9 @@ import type { ScenarioRecord } from "@/src/data/scenarios";
 import { fmtPct1 } from "@/src/lib/format";
 import { buildBusinessCase, DELIVERY_MONTH, deliveryRows, overlapLine, overlapSavingLine, stewardshipLines, DEMO_NOTE } from "@/src/lib/projectsView";
 import { evaluateScenario, paybackLabel, type ScenarioResult } from "@/src/lib/scenarios";
+import { opportunityById } from "@/src/lib/catalogue";
+import { fundingNeedsLine } from "@/src/lib/funding";
+import { approverLabel, canApproveBaseline, funderNames } from "@/src/lib/selectors";
 import { getSite } from "@/src/lib/selectors";
 import { CitationChip, StatusPill } from "@/src/components/ui";
 import { ForecastTags } from "./ProjectsParts";
@@ -53,10 +56,13 @@ export function ResultNotes({ result, baseline }: { result: ScenarioResult; base
 
 function BusinessCaseView({ scenario }: { scenario: ScenarioRecord }) {
   const { site, evaluate, baseline } = useScenarioModel();
-  const { scenarios } = useProjects();
+  const { scenarios, commitments, shortlist } = useProjects();
   const result = evaluate(scenario.items);
   const alternatives = scenarios.filter((s) => s.id !== "S0" && s.id !== scenario.id && s.factoryId === scenario.factoryId).map((s) => ({ id: s.id, name: s.name, result: evaluate(s.items) }));
   const bc = buildBusinessCase(scenario, result, baseline, alternatives, site.name);
+  // Who pays and who has committed, added to "Funding needs" only. Every computed number above is unchanged.
+  const fundingLine = fundingNeedsLine(scenario.items.map(opportunityById).filter((o) => !!o), commitments, (id) => funderNames(shortlist[id] ?? []));
+  const sections = bc.sections.map((s) => (s.heading === "Funding needs" ? { ...s, lines: [...s.lines, fundingLine] } : s));
   return (
     <article className="card p-6" aria-label={bc.title}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -64,7 +70,7 @@ function BusinessCaseView({ scenario }: { scenario: ScenarioRecord }) {
         <span className="inline-flex flex-wrap items-center gap-2"><StatusPill tone="caution" shape="diamond" label={bc.note} /><ForecastTags /></span>
       </div>
       <dl className="mt-4 space-y-4">
-        {bc.sections.map((s) => (
+        {sections.map((s) => (
           <div key={s.heading}>
             <dt className="font-semibold text-ink-900">{s.heading}</dt>
             <dd>
@@ -78,7 +84,7 @@ function BusinessCaseView({ scenario }: { scenario: ScenarioRecord }) {
   );
 }
 
-/** Generate business case, and Approve as delivery baseline (brand only). The supplier sees "Approval by brand". */
+/** Generate business case, and Approve as delivery baseline when canApproveBaseline allows this role. Otherwise the approver is named. */
 export function ScenarioActions({ scenario }: { scenario: ScenarioRecord }) {
   const { role } = useRole();
   const { approved, approve } = useProjects();
@@ -96,12 +102,12 @@ export function ScenarioActions({ scenario }: { scenario: ScenarioRecord }) {
           <span className="text-ink-500">The no-project baseline has nothing to approve.</span>
         ) : isApproved ? (
           <StatusPill tone="positive" shape="circle" label="Approved as delivery baseline" />
-        ) : role === "brand" ? (
+        ) : role && canApproveBaseline(role) ? (
           <button type="button" className="btn btn-secondary min-h-11 px-5" onClick={() => approve(scenario)}>
             <ShieldCheck className="size-4" aria-hidden="true" /> Approve as delivery baseline
           </button>
         ) : (
-          <span className="inline-flex items-center gap-1.5 font-semibold text-ink-500"><Lock className="size-4" aria-hidden="true" /> Approval by brand</span>
+          <span className="inline-flex items-center gap-1.5 font-semibold text-ink-500"><Lock className="size-4" aria-hidden="true" /> Approval by {approverLabel().replace("Approved by ", "")}</span>
         )}
       </div>
       {showCase && !none && <BusinessCaseView scenario={scenario} />}

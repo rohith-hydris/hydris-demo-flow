@@ -6,7 +6,7 @@ import type {
 
 // Input records only. Ranks, tiers, bands, R, I-derived labels, PWI and roll-ups are computed in src/lib/.
 
-export interface SupplierRecord { id: SupplierId; name: string; cluster: string; factoryIds: FactoryId[] }
+export interface SupplierRecord { id: SupplierId; name: string; cluster: string; factoryIds: FactoryId[]; sizeClass: "MSME" | "Large" }
 
 /** PRODUCT 5.3 inputs. R is an output (computed from the risk scores), so it is not stored here. */
 export interface FactoryRecord {
@@ -179,6 +179,8 @@ export interface Participant {
   /** The share of the physical benefit this participant claims (0 to 1). Funding does not create entitlement. */
   claimAllocation: number;
   claimState: "Eligible" | "Conflict" | "n/a";
+  /** True marks the brand's own funding participant (role Contributor). Funding only: it never creates a claim. */
+  isBrand?: boolean;
   /** True for the participants who are Lumen supply-chain sites in the demo. */
   factoryId?: FactoryId;
 }

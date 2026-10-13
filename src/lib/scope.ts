@@ -1,6 +1,6 @@
 import { DEMO_SUPPLIER_ID, SUPPLIER_TENANT } from "@/src/data/tenants";
 import { suppliers } from "@/src/data/suppliers";
-import type { Role } from "./roles";
+import { canValidateClaims, type Role } from "./roles";
 import type { FactoryId, SupplierId } from "./types";
 
 // PRODUCT 2: data scoping. The brand sees all 5 suppliers and 14 factories; the supplier sees SUP5 only.
@@ -20,13 +20,23 @@ export function scopeFor(role: Role): Scope {
     role,
     supplierIds: visible.map((s) => s.id),
     factoryIds: visible.flatMap((s) => s.factoryIds),
-    canValidate: role === "brand",
+    canValidate: canValidateClaims(role),
     canSeeValidationAgent: role === "brand",
   };
 }
 
 export const canSeeFactory = (scope: Scope, factoryId: FactoryId) => scope.factoryIds.includes(factoryId);
 export const canSeeSupplier = (scope: Scope, supplierId: SupplierId) => scope.supplierIds.includes(supplierId);
+
+/**
+ * The factories in view on Projects: the scope, narrowed to one supplier when a supplier filter is set. Null or "all" keeps the
+ * whole scope; an unknown supplier, or one outside the scope, gives an empty list.
+ */
+export function factoryIdsInView(scope: Scope, supplierId: SupplierId | null): FactoryId[] {
+  if (supplierId === null || supplierId === "all") return scope.factoryIds;
+  const own = suppliers.find((s) => s.id === supplierId)?.factoryIds ?? [];
+  return scope.factoryIds.filter((id) => own.includes(id));
+}
 
 /** Keep only the rows whose factory is in scope. */
 export const inScope = <T extends { factoryId: FactoryId }>(scope: Scope, rows: T[]): T[] =>
